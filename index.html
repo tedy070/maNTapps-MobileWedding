@@ -491,7 +491,8 @@ function pgSeserahan(){
   <div class="card"><div style="font-size:10px;font-weight:600;color:var(--gray);letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px">${L("overallProgress")}</div><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-weight:600;font-size:14px">${t.sesDone} / ${S.seserahan.length} ${L("itemsReady")}</span><span style="font-size:13px;color:var(--gray)">${pct}%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div></div>
   <div class="grad-card"><div style="font-size:10px;font-weight:600;color:var(--rose-mid);letter-spacing:.6px;text-transform:uppercase;margin-bottom:4px">${L("estimatedCost")}</div><div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--rose-dark);margin-top:2px">${fmt(t.sesCost)}</div><div style="font-size:12.5px;color:var(--teal);margin-top:5px;display:flex;align-items:center;gap:4px"><i class="ti ti-circle-check" style="font-size:14px"></i>${L("withinBudget")}</div></div>
   <div class="pill-row">${[[L("allParty"),"Semua"],[L("male"),"Pria"],[L("female"),"Wanita"],[L("dowry"),"Mahar"]].map(([lbl,v])=>`<span class="pill${S.sesFilter===v?" active":""}" data-ses-filter="${v}">${lbl}</span>`).join("")}</div>
-  ${items.map(item=>`<div class="card"><div style="display:flex;gap:12px"><div style="width:48px;height:48px;border-radius:13px;background:var(--gray-light);display:flex;align-items:center;justify-content:center;color:var(--gray);flex-shrink:0"><i class="ti ${catIcon(item.cat)}" style="font-size:22px"></i></div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="font-weight:600;font-size:14px">${item.name}</div><span class="badge ${sCls(item.status)}" style="flex-shrink:0"><i class="ti ${sIcon(item.status)}" style="font-size:10px"></i> ${item.status}</span></div><div style="font-size:12px;color:var(--gray);margin-top:2px">${item.cat} &middot; ${item.party}</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><div style="font-size:13px;font-weight:700;color:var(--rose)">${fmt(item.price)}</div><button class="edit-btn" data-edit-ses="${item.id}"><i class="ti ti-pencil" style="font-size:13px"></i></button></div></div></div></div>`).join("")}
+  ${items.map(item=>`<div class="card"><div style="display:flex;gap:12px"><div style="width:48px;height:48px;border-radius:13px;background:var(--gray-light);display:flex;align-items:center;justify-content:center;color:var(--gray);flex-shrink:0"><i class="ti ${catIcon(item.cat)}" style="font-size:22px"></i></div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="font-weight:600;font-size:14px">${item.name}</div><span class="badge ${sCls(item.status)}" style="flex-shrink:0"><i class="ti ${sIcon(item.status)}" style="font-size:10px"></i> ${item.status}</span></div><div style="font-size:12px;color:var(--gray);margin-top:2px">${item.cat} &middot; ${item.party}</div>${item.link?`<div style="margin-top:6px"><a href="${item.link}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--rose-dark);text-decoration:none;background:var(--pink-bg);padding:4px 10px;border-radius:20px;border:1px solid var(--rose-light)"><i class="ti ti-shopping-bag" style="font-size:12px"></i>Beli di Toko</a></div>`:""}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><div style="font-size:13px;font-weight:700;color:var(--rose)">${fmt(item.price)}</div><button class="edit-btn" data-edit-ses="${item.id}"><i class="ti ti-pencil" style="font-size:13px"></i></button></div></div></div></div>`).join("")}
   <button class="fab" id="fab-ses"><i class="ti ti-plus" style="font-size:22px"></i></button>`;
 }
 
@@ -535,9 +536,10 @@ function vendorCard(v){
       <button class="edit-btn" data-edit-vendor="${v.id}"><i class="ti ti-pencil" style="font-size:13px"></i></button>
     </div></div>
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light)">
-      <div style="font-size:12.5px;color:var(--gray);display:flex;align-items:center;gap:6px;margin-bottom:4px"><i class="ti ti-phone" style="font-size:14px"></i>${v.phone}</div>
-      <div style="font-size:12.5px;color:var(--gray);display:flex;align-items:center;gap:6px;margin-bottom:8px"><i class="ti ti-mail" style="font-size:14px"></i>${v.email}</div>
-      <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:10.5px;color:var(--gray);font-weight:600;letter-spacing:.3px;text-transform:uppercase">${L("estimatedCostLabel")}</span><span style="font-size:14px;font-weight:700">${fmt(v.cost)}</span></div>
+      ${v.phone?`<a href="tel:${v.phone}" style="text-decoration:none;display:flex;align-items:center;gap:6px;margin-bottom:4px"><i class="ti ti-phone" style="font-size:14px;color:var(--teal)"></i><span style="font-size:12.5px;color:var(--teal);font-weight:500">${v.phone}</span></a>`:`<div style="font-size:12.5px;color:var(--gray);display:flex;align-items:center;gap:6px;margin-bottom:4px"><i class="ti ti-phone" style="font-size:14px"></i>-</div>`}
+      ${v.email?`<a href="mailto:${v.email}" style="text-decoration:none;display:flex;align-items:center;gap:6px;margin-bottom:6px"><i class="ti ti-mail" style="font-size:14px;color:var(--rose-mid)"></i><span style="font-size:12.5px;color:var(--rose-mid);font-weight:500">${v.email}</span></a>`:`<div style="font-size:12.5px;color:var(--gray);display:flex;align-items:center;gap:6px;margin-bottom:6px"><i class="ti ti-mail" style="font-size:14px"></i>-</div>`}
+      ${v.link?`<a href="${v.link}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--rose-dark);background:var(--pink-bg);padding:4px 10px;border-radius:20px;border:1px solid var(--rose-light);margin-bottom:8px"><i class="ti ti-shopping-bag" style="font-size:12px"></i>Lihat di Toko</a><br>`:""}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px"><span style="font-size:10.5px;color:var(--gray);font-weight:600;letter-spacing:.3px;text-transform:uppercase">${L("estimatedCostLabel")}</span><span style="font-size:14px;font-weight:700">${fmt(v.cost)}</span></div>
     </div></div>`;
 }
 
@@ -712,6 +714,8 @@ function buildSesForm(id){
 <div style="display:flex;gap:8px;flex-wrap:wrap">${pillRow([["Pria",L("male")],["Wanita",L("female")],["Mahar",L("dowry")]],"data-ses-party",sesParty)}</div>
 <span class="field-label">${L("priceEstimate")}</span>
 <div class="money-wrap"><span class="money-pfx">Rp</span><input id="m-ses-price" class="money-input" inputmode="numeric" placeholder="0" value="${ex?fmtN(ex.price):""}"></div>
+<span class="field-label">Link Toko / Shopee</span>
+<div style="display:flex;gap:9px;align-items:center"><i class="ti ti-shopping-bag" style="font-size:17px;color:var(--gray)"></i><input id="m-ses-link" class="input-field" placeholder="https://shopee.co.id/..." value="${ex&&ex.link?ex.link:""}"></div>
 <span class="field-label">${L("status")}</span>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">${sts.map(([v,lbl])=>`<div class="rsvp-seg${sesStatus===v?" active":""}" data-ses-st="${v}">${lbl}</div>`).join("")}</div>
 ${isEdit?`<button class="btn-danger" data-del="ses"><i class="ti ti-trash" style="font-size:15px"></i>${L("deleteSeserahan")}</button>`:""}
@@ -722,8 +726,9 @@ function saveSes(id){
   if(!name){showToast(L("fillName"));return;}
   const cat=(document.getElementById("cat-hid-ses")||{}).value||"Lain-Lain";
   const price=moneyVal("m-ses-price");
-  if(id){const item=S.seserahan.find(x=>String(x.id)===String(id));if(item)Object.assign(item,{name,cat,party:sesParty,price,status:sesStatus});showToast(L("sesUpdated"));}
-  else{S.seserahan.push({id:Date.now(),name,cat,party:sesParty,price,status:sesStatus});showToast(L("sesAdded"));}
+  const link=(document.getElementById("m-ses-link").value||"").trim();
+  if(id){const item=S.seserahan.find(x=>String(x.id)===String(id));if(item)Object.assign(item,{name,cat,party:sesParty,price,status:sesStatus,link});showToast(L("sesUpdated"));}
+  else{S.seserahan.push({id:Date.now(),name,cat,party:sesParty,price,status:sesStatus,link});showToast(L("sesAdded"));}
   closeModal();renderPage("seserahan");
 }
 
@@ -820,6 +825,8 @@ function buildVendorForm(id){
 <div class="money-wrap"><span class="money-pfx">Rp</span><input id="m-v-cost" class="money-input" inputmode="numeric" placeholder="0" value="${ex?fmtN(ex.cost):""}"></div>
 <span class="field-label">${L("confirmStatus")}</span>
 <div style="display:flex;gap:8px;margin-top:4px">${pillRow([["true","<i class=\"ti ti-circle-check\" style=\"font-size:12px\"></i> "+L("confirmed")],["false","<i class=\"ti ti-clock\" style=\"font-size:12px\"></i> "+L("notYet")]],"data-v-ok",String(vOk))}</div>
+<span class="field-label">Link Toko / Shopee</span>
+<div style="display:flex;gap:9px;align-items:center"><i class="ti ti-shopping-bag" style="font-size:17px;color:var(--gray)"></i><input id="m-v-link" class="input-field" placeholder="https://shopee.co.id/..." value="${ex&&ex.link?ex.link:""}"></div>
 <span class="field-label">${L("additionalNotes")}</span>
 <input id="m-v-notes" class="input-field" placeholder="${L("additionalNotesPh")}" value="${ex&&ex.notes?ex.notes:""}">
 ${isEdit?`<button class="btn-danger" data-del="vendor"><i class="ti ti-trash" style="font-size:15px"></i>${L("deleteVendor")}</button>`:""}
@@ -834,9 +841,10 @@ function saveVendor(id){
   const email=(document.getElementById("m-v-email").value||"");
   const cost=moneyVal("m-v-cost");
   const notes=(document.getElementById("m-v-notes").value||"");
+  const link=(document.getElementById("m-v-link").value||"").trim();
   const photo=vendorPhoto;
-  if(id){const v=S.vendors.find(x=>String(x.id)===String(id));if(v)Object.assign(v,{name,cat,desc,phone,email,cost,ok:vOk,notes,photo});showToast(L("vendorUpdated"));}
-  else{S.vendors.push({id:Date.now(),name,cat,desc,phone,email,cost,ok:false,notes,photo});showToast(L("vendorAdded"));}
+  if(id){const v=S.vendors.find(x=>String(x.id)===String(id));if(v)Object.assign(v,{name,cat,desc,phone,email,cost,ok:vOk,notes,link,photo});showToast(L("vendorUpdated"));}
+  else{S.vendors.push({id:Date.now(),name,cat,desc,phone,email,cost,ok:false,notes,link,photo});showToast(L("vendorAdded"));}
   closeModal();renderPage("vendor");vendorPhoto=null;
 }
 
