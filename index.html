@@ -2,7 +2,7 @@
 <html lang="id" id="html-root">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>Wedding Planner</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -17,22 +17,20 @@
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--rose:#7D3C52;--rose-light:#F5D6E3;--rose-dark:#5C2A3C;--rose-mid:#C0637D;--teal:#3D7A6E;--teal-light:#E2F5F0;--teal-dark:#2A5C52;--cream:#FAF8F5;--white:#FFFFFF;--border:#E5DDD6;--border-light:#EEE8E2;--gray:#6B6460;--gray-light:#F0EBE6;--dark:#2C1A14;--pink-bg:#FDE8F2;--pink-card:#F9EEF4;--amber-bg:#FEF3E2;--amber:#8B5E1A;--success-bg:#E2F5F0;--success:#1A6B55;--danger-bg:#FFECEC;--danger:#8B2020;--bg-page:#E0D8D0;--shadow:rgba(0,0,0,.15);}
 .dark{--cream:#1A1410;--white:#242018;--border:#3A3028;--border-light:#302820;--gray:#A8A098;--gray-light:#2E2820;--dark:#F0EAE0;--pink-bg:#2E1820;--pink-card:#281618;--amber-bg:#2A200A;--amber:#D4A050;--success-bg:#0E2018;--success:#4ACC8A;--danger-bg:#200A0A;--danger:#FF6B6B;--bg-page:#100C08;--rose-light:#3A1828;--teal-light:#0E2018;}
-html,body{height:100%;margin:0;padding:0;background:var(--bg-page);transition:background .3s}
+html,body{height:100%;background:var(--bg-page);transition:background .3s}
 body{font-family:"DM Sans",sans-serif;color:var(--dark);overflow-x:hidden;transition:color .3s}
-.app{display:flex;flex-direction:column;position:fixed;top:0;left:50%;right:auto;bottom:0;width:100%;max-width:480px;transform:translateX(-50%);background:var(--cream);box-shadow:0 0 60px var(--shadow);transition:background .3s;overflow:hidden;-webkit-overflow-scrolling:touch}
+.app{display:flex;flex-direction:column;height:100vh;max-width:480px;margin:0 auto;background:var(--cream);box-shadow:0 0 60px var(--shadow);transition:background .3s}
 .header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px 12px;background:var(--white);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:60;flex-shrink:0;transition:background .3s}
 .brand{font-family:"Cormorant Garamond",serif;font-size:20px;color:var(--teal);font-style:italic;font-weight:600;letter-spacing:.5px}
 .hicons{display:flex;gap:6px}
 .hicon{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--white);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--gray);transition:all .2s;flex-shrink:0}
 .hicon:hover{background:var(--gray-light);color:var(--dark)}
-.notif-dot{position:absolute;top:5px;right:5px;width:8px;height:8px;background:var(--danger);border-radius:50%;border:1.5px solid var(--white)}
-#btn-notif{position:relative}
-.screen{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding-bottom:80px;-webkit-overflow-scrolling:touch;min-height:0;overscroll-behavior:contain}
+.screen{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding-bottom:10px}
 .screen::-webkit-scrollbar{display:none}
-.tabbar{display:flex;background:var(--white);border-top:1px solid var(--border);flex-shrink:0;transition:background .3s;padding-bottom:env(safe-area-inset-bottom,0px);position:relative;z-index:10;touch-action:manipulation}
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 2px 12px;cursor:pointer;font-size:8px;color:var(--gray);gap:3px;border-top:2.5px solid transparent;transition:all .2s;letter-spacing:.2px;text-transform:uppercase;font-weight:600;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation;min-width:0;overflow:hidden}
+.tabbar{display:flex;background:var(--white);border-top:1px solid var(--border);flex-shrink:0;transition:background .3s}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 0 10px;cursor:pointer;font-size:8px;color:var(--gray);gap:3px;border-top:2px solid transparent;transition:all .2s;letter-spacing:.2px;text-transform:uppercase;font-weight:500;user-select:none}
 .tab.active{color:var(--teal);border-top-color:var(--teal)}
-.tab i{font-size:20px;line-height:1;flex-shrink:0}
+.tab i{font-size:18px;line-height:1}
 .card{background:var(--white);border-radius:16px;padding:16px;margin:0 14px 12px;border:1px solid var(--border);transition:background .3s}
 .card-sm{background:var(--white);border-radius:12px;padding:12px 14px;border:1px solid var(--border);transition:background .3s}
 .grad-card{background:linear-gradient(135deg,#F9E4EE,#DFF0EB);border-radius:16px;padding:16px;margin:0 14px 12px}
@@ -53,7 +51,7 @@ body{font-family:"DM Sans",sans-serif;color:var(--dark);overflow-x:hidden;transi
 .pill.active{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:600}
 .progress-bar{height:5px;background:var(--gray-light);border-radius:5px;overflow:hidden}
 .progress-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,var(--rose),var(--teal))}
-.fab{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--rose),var(--teal));border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;position:sticky;bottom:16px;left:calc(100% - 66px);margin-right:14px;margin-top:-26px;box-shadow:0 4px 18px rgba(93,44,60,.35);transition:transform .15s;touch-action:manipulation;z-index:5}
+.fab{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--rose),var(--teal));border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;position:sticky;bottom:18px;left:calc(100% - 66px);margin-right:14px;margin-top:-26px;box-shadow:0 4px 18px rgba(93,44,60,.35);transition:transform .15s}
 .fab:hover{transform:scale(1.07)}
 .fab:active{transform:scale(.96)}
 .field-label{font-size:10px;font-weight:600;color:var(--gray);letter-spacing:.7px;margin-bottom:4px;margin-top:15px;display:block;text-transform:uppercase}
@@ -69,7 +67,7 @@ textarea.input-field:focus{border-color:var(--teal)}
 .btn-primary:hover{opacity:.9}
 .btn-danger{width:100%;background:linear-gradient(135deg,#8B2020,#5C2A3C);color:#fff;border:none;border-radius:50px;padding:13px;font-family:"DM Sans",sans-serif;font-size:13.5px;cursor:pointer;font-weight:600;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:7px}
 .btn-outline-danger{width:100%;border:1.5px solid #E0A0A0;background:transparent;color:var(--danger);border-radius:12px;padding:13px;font-family:"DM Sans",sans-serif;font-size:14px;cursor:pointer;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:500}
-.modal-overlay{position:fixed;inset:0;background:rgba(30,15,10,.6);z-index:200;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);touch-action:none}
+.modal-overlay{position:fixed;inset:0;background:rgba(30,15,10,.6);z-index:200;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)}
 .modal-overlay.open{display:flex}
 .modal-sheet{background:var(--white);border-radius:24px 24px 0 0;padding:24px 20px 44px;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;scrollbar-width:none;transition:background .3s}
 .modal-sheet::-webkit-scrollbar{display:none}
@@ -140,30 +138,6 @@ textarea.input-field:focus{border-color:var(--teal)}
 .lang-option:last-child{margin-bottom:0}
 .lang-option.active,.lang-option:hover{border-color:var(--teal);background:var(--teal-light)}
 .lang-flag{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px}
-/* ── MOBILE FIXES ── */
-@media (max-width:480px){
-  .tab span{font-size:7.5px;letter-spacing:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-  .tab{padding:9px 1px 11px;gap:3px}
-  .tab i{font-size:19px}
-  .card{margin:0 10px 10px;padding:14px 13px}
-  .grad-card{margin:0 10px 10px}
-  .section-head{font-size:30px}
-  .hero-banner h1{font-size:36px}
-}
-/* Touch-action for all interactive elements to remove 300ms delay */
-button,.tab,.pill,.hicon,.edit-btn,.rsvp-seg,.cat-card,.setting-row,.doc-row,.help-topic-item,
-.back-btn,.lang-option,.fab,.btn-primary,.btn-danger,.btn-outline-danger,.cat-confirm-btn,
-.cat-trigger,.circle-check,[onclick],[data-edit-tx],[data-edit-ses],[data-edit-guest],
-[data-edit-doc],[data-edit-vendor],[data-ok-vendor],[data-cycle-doc],[data-bud-filter],
-[data-ses-filter],[data-edit-brm-person],[data-add-brm-item],[data-edit-brm-item],
-[data-save],[data-del],[data-tx-type],[data-ses-status],[data-tx-st],[data-g-group],
-[data-g-rsvp],[data-g-vip],[data-brmg-group],[data-brmg-rsvp],[data-brmg-vip],[data-brmi-st]
-{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-/* Prevent any element from blocking tab interaction */
-.screen > *{pointer-events:auto}
-/* Ensure html/body don't trap scroll */
-html{-webkit-text-size-adjust:100%;height:-webkit-fill-available}
-body{min-height:-webkit-fill-available}
 </style>
 </head>
 <body>
@@ -249,8 +223,6 @@ const S={
   tamuTab:"tamu",
   brmSubTab:"nama",
   brismed:[],
-  brismedItems:[],
-  notifLog:[],
   profilePhoto:"Foto_Profil.jpeg"||null,coverPhoto:"Cover_Profil.jpeg"||null
 };
 
@@ -369,105 +341,21 @@ function applyLang(){
   renderPage(curTab);
 }
 
-/* ── Notifications ── */
-function addNotif(msg,icon){
-  icon=icon||"ti-bell";
-  if(!S.notifLog)S.notifLog=[];
-  S.notifLog.unshift({id:Date.now(),msg,icon,time:new Date().toISOString(),read:false});
-  if(S.notifLog.length>50)S.notifLog=S.notifLog.slice(0,50);
-  updateNotifDot();
-  /* Browser push notification */
-  if(window.Notification&&Notification.permission==="granted"){
-    try{new Notification("Wedding Planner",{body:msg,icon:"maNTapps_MobileWedding_iphone.PNG"});}catch(e){}
-  }
-}
-function updateNotifDot(){
-  const btn=document.getElementById("btn-notif");if(!btn)return;
-  let dot=document.getElementById("notif-dot-badge");
-  const unread=(S.notifLog||[]).filter(n=>!n.read).length;
-  if(unread>0){
-    if(!dot){dot=document.createElement("span");dot.id="notif-dot-badge";dot.className="notif-dot";btn.appendChild(dot);}
-  }else{if(dot)dot.remove();}
-}
-function showNotifPanel(){
-  if(document.getElementById("notif-panel"))return;
-  (S.notifLog||[]).forEach(n=>n.read=true);
-  updateNotifDot();
-  const overlay=document.createElement("div");overlay.id="notif-panel";
-  overlay.style.cssText="position:fixed;inset:0;background:rgba(30,15,10,.55);z-index:250;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)";
-  const sheet=document.createElement("div");
-  sheet.style.cssText="background:var(--cream);border-radius:24px 24px 0 0;padding:20px 18px 40px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch";
-  const hdr=document.createElement("div");
-  hdr.style.cssText="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px";
-  hdr.innerHTML=`<div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--dark)">Notifikasi</div><div style="display:flex;gap:8px;align-items:center">`;
-  const pushBtn=document.createElement("button");
-  pushBtn.style.cssText="padding:6px 12px;border-radius:20px;border:1.5px solid var(--teal);background:var(--teal-light);color:var(--teal-dark);font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:4px";
-  const perm=window.Notification?Notification.permission:"unsupported";
-  pushBtn.innerHTML=`<i class="ti ${perm==="granted"?"ti-bell-check":"ti-bell-plus"}" style="font-size:13px"></i>${perm==="granted"?"Push Aktif":"Aktifkan Push"}`;
-  if(perm!=="granted"&&window.Notification){pushBtn.onclick=()=>{Notification.requestPermission().then(p=>{if(p==="granted"){pushBtn.innerHTML='<i class="ti ti-bell-check" style="font-size:13px"></i>Push Aktif';showToast("Push notifikasi diaktifkan!");}});}}
-  else{pushBtn.style.opacity=".6";}
-  const closeBtn=document.createElement("button");
-  closeBtn.className="hicon";closeBtn.innerHTML='<i class="ti ti-x"></i>';closeBtn.onclick=()=>overlay.remove();
-  hdr.querySelector("div:last-child").appendChild(pushBtn);hdr.querySelector("div:last-child").appendChild(closeBtn);
-  sheet.appendChild(hdr);
-  const list=S.notifLog||[];
-  if(list.length===0){
-    const empty=document.createElement("div");empty.style.cssText="text-align:center;padding:36px 0;color:var(--gray)";
-    empty.innerHTML='<i class="ti ti-bell-off" style="font-size:42px;display:block;margin-bottom:10px"></i>Belum ada notifikasi';
-    sheet.appendChild(empty);
-  }else{
-    list.forEach(n=>{
-      const row=document.createElement("div");
-      row.style.cssText="display:flex;align-items:flex-start;gap:12px;padding:13px 0;border-bottom:1px solid var(--border-light)";
-      const d=new Date(n.time);const now=new Date();const diff=Math.round((now-d)/60000);
-      const timeStr=diff<1?"Baru saja":diff<60?diff+" mnt lalu":diff<1440?Math.round(diff/60)+" jam lalu":d.toLocaleDateString("id-ID",{day:"numeric",month:"short"});
-      row.innerHTML=`<div style="width:38px;height:38px;border-radius:12px;background:var(--teal-light);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${n.icon}" style="font-size:18px;color:var(--teal)"></i></div><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:500;color:var(--dark);line-height:1.4">${n.msg}</div><div style="font-size:11px;color:var(--gray);margin-top:3px">${timeStr}</div></div>`;
-      sheet.appendChild(row);
-    });
-  }
-  overlay.appendChild(sheet);overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
-  document.body.appendChild(overlay);
-}
-function requestPushOnLoad(){
-  if(window.Notification&&Notification.permission==="default"){
-    /* Don't auto-prompt; wait for user to click bell */
-  }
-}
-
 /* ── Tabs ── */
-function switchToTab(name){
-  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
-  const activeTab=document.getElementById("tab-"+name);
-  if(activeTab)activeTab.classList.add("active");
-  ["ringkasan","anggaran","seserahan","tamu","dokumen","vendor"].forEach(p=>{
-    const pg=document.getElementById("page-"+p);
-    if(pg)pg.style.display=p===name?"block":"none";
-  });
-  curTab=name;renderPage(name);
-}
-
 function initTabs(){
   ["ringkasan","anggaran","seserahan","tamu","dokumen","vendor"].forEach(name=>{
-    const el=document.getElementById("tab-"+name);
-    if(!el)return;
-    // Both click and touchend for max mobile compatibility
-    let touchMoved=false;
-    el.addEventListener("touchstart",function(){touchMoved=false;},{passive:true});
-    el.addEventListener("touchmove",function(){touchMoved=true;},{passive:true});
-    el.addEventListener("touchend",function(e){
-      if(!touchMoved){e.preventDefault();switchToTab(name);}
-    },{passive:false});
-    el.addEventListener("click",function(e){
-      // Only fire click if not already handled by touchend
-      if(!("ontouchstart" in window))switchToTab(name);
+    document.getElementById("tab-"+name).addEventListener("click",function(){
+      document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+      this.classList.add("active");
+      ["ringkasan","anggaran","seserahan","tamu","dokumen","vendor"].forEach(p=>{
+        document.getElementById("page-"+p).style.display=p===name?"block":"none";
+      });
+      curTab=name;renderPage(name);
     });
   });
-  const notifBtn=document.getElementById("btn-notif");
-  if(notifBtn)notifBtn.addEventListener("click",()=>showNotifPanel());
-  const profBtn=document.getElementById("btn-profile");
-  if(profBtn)profBtn.addEventListener("click",()=>openSub("main"));
-  const modalOv=document.getElementById("modal-overlay");
-  if(modalOv)modalOv.addEventListener("click",function(e){if(e.target===this)closeModal();});
+  document.getElementById("btn-notif").addEventListener("click",()=>showToast(L("noNotif")));
+  document.getElementById("btn-profile").addEventListener("click",()=>openSub("main"));
+  document.getElementById("modal-overlay").addEventListener("click",function(e){if(e.target===this)closeModal();});
 }
 
 function renderPage(name){
@@ -495,7 +383,6 @@ function bindListEvents(){
   document.querySelectorAll("[data-edit-ses]").forEach(b=>{ b.onclick=()=>openModal("ses",b.dataset.editSes); });
   document.querySelectorAll("[data-edit-guest]").forEach(b=>{ b.onclick=()=>openModal("guest",b.dataset.editGuest); });
   document.querySelectorAll("[data-edit-doc]").forEach(b=>{ b.onclick=()=>openModal("doc",b.dataset.editDoc); });
-  document.querySelectorAll("[data-edit-brmsi]").forEach(b=>{b.onclick=()=>openModal("brismed-ses",b.dataset.editBrmsi);});
   document.querySelectorAll("[data-edit-vendor]").forEach(b=>{ b.onclick=()=>openModal("vendor",b.dataset.editVendor); });
   document.querySelectorAll("[data-ok-vendor]").forEach(b=>{ b.onclick=()=>{const v=S.vendors.find(x=>String(x.id)===String(b.dataset.okVendor));if(v){v.ok=!v.ok;refreshVendorList();}}; });
   document.querySelectorAll("[data-cycle-doc]").forEach(b=>{ b.onclick=()=>cycleDoc(b.dataset.cycleDoc); });
@@ -526,7 +413,7 @@ function bindListEvents(){
   const fabBrmSes=document.getElementById("fab-brismed-ses");
   if(fabBrmSes)fabBrmSes.onclick=()=>openModal("brismed-ses",null);
   const bAG=document.getElementById("btn-add-guest");if(bAG)bAG.onclick=()=>openModal("guest",null);
-  const seeAll=document.getElementById("see-all-vendors");if(seeAll)seeAll.onclick=()=>switchToTab("vendor");
+  const seeAll=document.getElementById("see-all-vendors");if(seeAll)seeAll.onclick=()=>document.getElementById("tab-vendor").click();
 }
 
 function refreshGuestList(){
@@ -555,7 +442,7 @@ function refreshVendorList(){
 function cycleDoc(id){
   const d=S.documents.find(x=>String(x.id)===String(id));if(!d)return;
   const cy=["Belum Diurus","Sedang Diproses","Selesai"];d.status=cy[(cy.indexOf(d.status)+1)%cy.length];
-  renderPage("dokumen");showToast(L("statusUpdated")+": "+d.status);addNotif("Status dokumen \""+d.name+"\" diperbarui: "+d.status,"ti-file-check");
+  renderPage("dokumen");showToast(L("statusUpdated")+": "+d.status);
 }
 
 /* ── PAGES ── */
@@ -624,9 +511,6 @@ function pgRingkasan(){
     </div>
     <div class="progress-bar"><div class="progress-fill" style="width:${sesPct}%"></div></div>
     <div style="margin-top:8px;font-size:12px;color:var(--gray)">${L("estimatedCost")}: <span style="font-weight:700;color:var(--rose-dark)">${fmt(t.sesCost)}</span></div>
-  </div>
-  <div class="card" style="background:var(--teal-light);border-color:var(--teal)">
-    ${(()=>{const bItems=S.brismedItems||[];const bDone=bItems.filter(i=>["Siap","Sudah Dibeli","Sudah Dihias"].includes(i.status)).length;const bTotal=bItems.length;const bPct=Math.round(bDone/Math.max(bTotal,1)*100);const bCost=bItems.reduce((a,i)=>a+i.price,0);return`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-weight:600;font-size:15px;color:var(--teal-dark)">Perlengkapan Bridesmaid</span><i class="ti ti-package" style="font-size:20px;color:var(--teal)"></i></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--teal-dark)">${bTotal}</div><div style="font-size:9.5px;font-weight:600;color:var(--teal);letter-spacing:.4px;text-transform:uppercase">Total</div></div><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--success)">${bDone}</div><div style="font-size:9.5px;font-weight:600;color:var(--success);letter-spacing:.4px;text-transform:uppercase">Siap</div></div><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--teal-dark)">${bPct}%</div><div style="font-size:9.5px;font-weight:600;color:var(--teal);letter-spacing:.4px;text-transform:uppercase">Progress</div></div></div><div class="progress-bar" style="background:rgba(61,122,110,.2)"><div class="progress-fill" style="width:${bPct}%;background:var(--teal)"></div></div><div style="margin-top:8px;font-size:12px;color:var(--teal-dark)">Estimasi Biaya: <span style="font-weight:700">${fmt(bCost)}</span>${S.brismed.length>0?` &middot; ${S.brismed.length} bridesmaid`:""}</div>`;})()}
   </div>
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-weight:600;font-size:15px">${L("latestVendor")}</span><button id="see-all-vendors" style="font-size:11px;font-weight:700;color:var(--teal);background:none;border:none;cursor:pointer;letter-spacing:.4px;text-transform:uppercase;font-family:'DM Sans',sans-serif">${L("seeAll")}</button></div>
@@ -716,12 +600,14 @@ function pgBrismedTamu(){
 
 function pgBrismedPage(){
   const totalBrm=S.brismed.length;
-  const allItems=S.brismedItems||[];
+  const allItems=S.brismed.flatMap(b=>b.items||[]);
   const doneItems=allItems.filter(i=>["Siap","Sudah Dibeli","Sudah Dihias"].includes(i.status)).length;
   const totalCost=allItems.reduce((a,i)=>a+i.price,0);
   const pct=Math.round(doneItems/Math.max(allItems.length,1)*100);
   const brmSubTab=S.brmSubTab||"nama";
-  const sharedList=S.brismedItems||[];
+  const sharedItems={};
+  S.brismed.forEach(b=>(b.items||[]).forEach(i=>{if(!sharedItems[i.name])sharedItems[i.name]={name:i.name,cat:i.cat,price:i.price,status:i.status,link:i.link||"",instances:[]};sharedItems[i.name].instances.push({brmId:b.id,brmName:b.name,itemId:i.id,status:i.status});}));
+  const sharedList=Object.values(sharedItems);
   return `<div class="card" style="margin-top:4px"><div style="font-size:10px;font-weight:600;color:var(--gray);letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px">Progress Bridesmaid</div><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-weight:600;font-size:14px">${doneItems} / ${allItems.length} Perlengkapan Siap</span><span style="font-size:13px;color:var(--gray)">${pct}%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div></div>
   <div class="grad-card"><div style="font-size:10px;font-weight:600;color:var(--rose-mid);letter-spacing:.6px;text-transform:uppercase;margin-bottom:4px">Estimasi Total Biaya</div><div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--rose-dark);margin-top:2px">${fmt(totalCost)}</div><div style="font-size:12.5px;color:var(--teal);margin-top:5px;display:flex;align-items:center;gap:4px"><i class="ti ti-circle-check" style="font-size:14px"></i>${totalBrm} Bridesmaid &middot; ${allItems.length} item total</div></div>
   <div style="display:flex;background:var(--gray-light);border-radius:14px;padding:4px;margin:0 14px 14px">
@@ -734,8 +620,8 @@ function pgBrismedPage(){
       :S.brismed.map(b=>brismedPersonCard(b)).join("") )
     :( sharedList.length===0
       ?`<div class="card" style="text-align:center;padding:32px 16px;color:var(--gray)"><i class="ti ti-package" style="font-size:36px;display:block;margin-bottom:8px"></i>Belum ada perlengkapan</div>`
-      :sharedList.map(item=>{const stBadge={"Siap":"badge-ok","Sudah Dibeli":"badge-ok","Sudah Dihias":"badge-ok","Sedang Dikemas":"badge-warn","Belum Dibeli":"badge-gray"};const badgeCls=stBadge[item.status]||"badge-gray";return`<div class="card"><div style="display:flex;align-items:flex-start;gap:10px"><div style="width:42px;height:42px;border-radius:12px;background:var(--gray-light);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${catIcon(item.cat)}" style="font-size:20px;color:var(--gray)"></i></div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="font-weight:600;font-size:14px">${item.name}</div><button class="edit-btn" data-edit-brmsi="${item.id}"><i class="ti ti-pencil" style="font-size:13px"></i></button></div><div style="font-size:12px;color:var(--gray);margin-top:2px">${item.cat}</div><div style="margin-top:5px"><span class="badge ${badgeCls}" style="font-size:11px">${item.status}</span></div>${item.link?`<a href="${item.link}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--rose-dark);text-decoration:none;background:var(--pink-bg);padding:3px 9px;border-radius:20px;border:1px solid var(--rose-light);margin-top:6px"><i class="ti ti-shopping-bag" style="font-size:11px"></i>Beli di Toko</a>`:""}
-<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-light)"><span style="font-size:12px;font-weight:600;color:var(--dark)">${fmt(item.price)}</span></div>
+      :sharedList.map(item=>{const refId="brm_item_"+item.name.replace(/\s/g,"_");const paid=getPaidAmount(refId);const warn=getBudgetWarning(item.price,paid);const pcti=item.price>0?Math.min(100,Math.round(paid/item.price*100)):0;const doneCount=item.instances.filter(x=>["Siap","Sudah Dibeli","Sudah Dihias"].includes(x.status)).length;return`<div class="card"><div style="display:flex;align-items:flex-start;gap:10px"><div style="width:42px;height:42px;border-radius:12px;background:var(--gray-light);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${catIcon(item.cat)}" style="font-size:20px;color:var(--gray)"></i></div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="font-weight:600;font-size:14px">${item.name}</div><span class="badge ${warn.cls}" style="font-size:10px;flex-shrink:0"><i class="ti ${warn.ic}" style="font-size:9px"></i> ${warn.label}</span></div><div style="font-size:12px;color:var(--gray);margin-top:2px">${item.cat}</div><div style="font-size:11.5px;color:var(--gray);margin-top:4px">${doneCount}/${item.instances.length} siap &middot; ${item.instances.map(x=>x.brmName).join(", ")}</div>${item.link?`<a href="${item.link}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--rose-dark);text-decoration:none;background:var(--pink-bg);padding:3px 9px;border-radius:20px;border:1px solid var(--rose-light);margin-top:5px"><i class="ti ti-shopping-bag" style="font-size:11px"></i>Beli di Toko</a>`:""}
+<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-light)"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:11px;color:var(--gray)">Anggaran: <span style="font-weight:700;color:var(--dark)">${fmt(item.price)}</span></span><span style="font-size:11px;color:var(--gray)">Terpakai: <span style="font-weight:600;color:var(--dark)">${fmt(paid)}</span></span></div><div class="progress-bar" style="height:4px"><div class="progress-fill" style="width:${pcti}%;background:${warn.label==="Overbudget"?"var(--danger)":warn.label==="Cukup"?"var(--amber)":"var(--teal)"}"></div></div></div>
 </div></div></div>`;}).join("") )}
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:4px 14px 0">
     <button class="btn-primary" style="margin:0;background:linear-gradient(135deg,var(--rose-dark),var(--teal-dark))" id="fab-bridesmaid"><i class="ti ti-user-plus" style="font-size:15px"></i>Bridesmaid</button>
@@ -838,7 +724,6 @@ function bindModalEvents(type,id,brmId){
   const delBtn=mc.querySelector("[data-del]");
   if(delBtn)delBtn.onclick=()=>{
     if(type==="brismed-item")delBrismedItem(_brmId,_itemId);
-    else if(delBtn.dataset.del==="brismed-shared-item")delItem("brismed-shared-item",delBtn.dataset.itemId);
     else delItem(delBtn.dataset.del,id);
   };
   const savBtn=mc.querySelector("[data-save]");if(savBtn)savBtn.onclick=()=>{
@@ -850,7 +735,7 @@ function bindModalEvents(type,id,brmId){
     else if(t==="vendor")saveVendor(id);
     else if(t==="brismed")saveBrismed(id);
     else if(t==="brismed-item")saveBrismedItem(_brmId,_itemId||null);
-    else if(t==="brismed-ses")saveBrismedSeserahan(id);
+    else if(t==="brismed-ses")saveBrismedSeserahan();
   };
   mc.querySelectorAll("[data-tx-type]").forEach(p=>{p.onclick=()=>{switchTxType(p.dataset.txType);};});
   mc.querySelectorAll("[data-tx-st]").forEach(p=>{p.onclick=()=>{txStatus=p.dataset.txSt;mc.querySelectorAll("[data-tx-st]").forEach(x=>x.classList.toggle("active",x===p));};});
@@ -890,16 +775,16 @@ function delBrismedItem(brmId,itemId){
   const brm=S.brismed.find(x=>String(x.id)===String(brmId));
   if(brm&&brm.items)brm.items=brm.items.filter(i=>String(i.id)!==String(itemId));
   syncBrismedBudget();
-  closeModal();renderPage("tamu");showToast(L("itemDeleted"));addNotif("Perlengkapan dihapus","ti-trash");
+  closeModal();renderPage("tamu");showToast(L("itemDeleted"));
   syncBrismed(brmId);
 }
 
 function delItem(type,id){
   if(!confirm(L("itemDeleted")+"?"))return;
-  const map={tx:"transactions",ses:"seserahan",guest:"guests",doc:"documents",vendor:"vendors",brismed:"brismed","brismed-shared-item":"brismedItems"};
+  const map={tx:"transactions",ses:"seserahan",guest:"guests",doc:"documents",vendor:"vendors",brismed:"brismed"};
   if(map[type])S[map[type]]=S[map[type]].filter(x=>String(x.id)!==String(id));
   if(type==="brismed"){syncBrismedBudget();}
-  closeModal();renderPage(curTab);showToast(L("itemDeleted"));addNotif("Item berhasil dihapus","ti-trash");
+  closeModal();renderPage(curTab);showToast(L("itemDeleted"));
 }
 
 /* ── CAT PICKER ── */
@@ -1029,8 +914,8 @@ function saveTx(id){
   if(!name||!amt){showToast(L("fillRequired"));return;}
   const cat=(document.getElementById("cat-hid-tx")||{}).value||"Lain-Lain";
   const notes=(document.getElementById("m-tx-notes").value||"");
-  if(id){const tx=S.transactions.find(x=>String(x.id)===String(id));if(tx)Object.assign(tx,{name,cat,type:txType,amount:amt,status:txStatus,notes});showToast(L("budgetUpdated"));addNotif("Transaksi berhasil diperbarui","ti-report-money");}
-  else{S.transactions.unshift({id:Date.now(),name,cat,type:txType,amount:amt,status:txStatus,notes,date:new Date().toISOString().split("T")[0]});showToast(L("budgetAdded"));addNotif("Transaksi baru ditambahkan","ti-report-money");}
+  if(id){const tx=S.transactions.find(x=>String(x.id)===String(id));if(tx)Object.assign(tx,{name,cat,type:txType,amount:amt,status:txStatus,notes});showToast(L("budgetUpdated"));}
+  else{S.transactions.unshift({id:Date.now(),name,cat,type:txType,amount:amt,status:txStatus,notes,date:new Date().toISOString().split("T")[0]});showToast(L("budgetAdded"));}
   closeModal();renderPage("anggaran");
 }
 
@@ -1118,8 +1003,8 @@ function saveSes(id){
   const cat=(document.getElementById("cat-hid-ses")||{}).value||"Lain-Lain";
   const price=moneyVal("m-ses-price");
   const link=(document.getElementById("m-ses-link").value||"").trim();
-  if(id){const item=S.seserahan.find(x=>String(x.id)===String(id));if(item)Object.assign(item,{name,cat,party:sesParty,price,status:sesStatus,link});showToast(L("sesUpdated"));addNotif("Seserahan berhasil diperbarui","ti-gift");}
-  else{S.seserahan.push({id:Date.now(),name,cat,party:sesParty,price,status:sesStatus,link});showToast(L("sesAdded"));addNotif("Seserahan baru ditambahkan","ti-gift");}
+  if(id){const item=S.seserahan.find(x=>String(x.id)===String(id));if(item)Object.assign(item,{name,cat,party:sesParty,price,status:sesStatus,link});showToast(L("sesUpdated"));}
+  else{S.seserahan.push({id:Date.now(),name,cat,party:sesParty,price,status:sesStatus,link});showToast(L("sesAdded"));}
   closeModal();renderPage("seserahan");
 }
 
@@ -1157,8 +1042,8 @@ function saveGuest(id){
   if(!name){showToast(L("fillName"));return;}
   gCount=parseInt((document.getElementById("g-cnt-disp")||{}).textContent)||1;
   const contact=(document.getElementById("m-g-contact").value||"");
-  if(id){const g=S.guests.find(x=>String(x.id)===String(id));if(g)Object.assign(g,{name,group:gGroup,contact,count:gCount,vip:gVip,rsvp:gRsvp});showToast(L("guestUpdated"));addNotif("Data tamu diperbarui","ti-users");}
-  else{S.guests.push({id:Date.now(),name,group:gGroup,contact,count:gCount,vip:gVip,rsvp:gRsvp});showToast(L("guestAdded"));addNotif("Tamu baru ditambahkan","ti-user-plus");}
+  if(id){const g=S.guests.find(x=>String(x.id)===String(id));if(g)Object.assign(g,{name,group:gGroup,contact,count:gCount,vip:gVip,rsvp:gRsvp});showToast(L("guestUpdated"));}
+  else{S.guests.push({id:Date.now(),name,group:gGroup,contact,count:gCount,vip:gVip,rsvp:gRsvp});showToast(L("guestAdded"));}
   closeModal();renderPage("tamu");
 }
 
@@ -1197,8 +1082,8 @@ function saveBrismed(id){
   if(!name){showToast(L("fillName"));return;}
   brmGCount=parseInt((document.getElementById("brm-cnt-disp")||{}).textContent)||1;
   const contact=(document.getElementById("m-brm-contact").value||"");
-  if(id){const b=S.brismed.find(x=>String(x.id)===String(id));if(b)Object.assign(b,{name,group:brmGGroup,contact,count:brmGCount,vip:brmGVip,rsvp:brmGRsvp});showToast("Bridesmaid diperbarui");addNotif("Data bridesmaid diperbarui","ti-users-group");}
-  else{S.brismed.push({id:Date.now(),name,group:brmGGroup,contact,count:brmGCount,vip:brmGVip,rsvp:brmGRsvp,items:[]});showToast("Bridesmaid ditambahkan");addNotif("Bridesmaid baru ditambahkan","ti-users-group");}
+  if(id){const b=S.brismed.find(x=>String(x.id)===String(id));if(b)Object.assign(b,{name,group:brmGGroup,contact,count:brmGCount,vip:brmGVip,rsvp:brmGRsvp});showToast("Bridesmaid diperbarui");}
+  else{S.brismed.push({id:Date.now(),name,group:brmGGroup,contact,count:brmGCount,vip:brmGVip,rsvp:brmGRsvp,items:[]});showToast("Bridesmaid ditambahkan");}
   closeModal();renderPage("tamu");
 }
 
@@ -1235,7 +1120,7 @@ function saveBrismedItem(brmId,itemId){
   else{brm.items.push({id:Date.now(),name,cat,price,status:brmItemStatus,link});}
   /* Sync budget: add/update "Bridesmaid" transactions for each item that is "Siap/Sudah Dibeli/Sudah Dihias" */
   syncBrismedBudget();
-  showToast("Perlengkapan disimpan");addNotif("Perlengkapan bridesmaid diperbarui","ti-package");
+  showToast("Perlengkapan disimpan");
   closeModal();renderPage("tamu");
   syncBrismed(brmId);
 }
@@ -1252,39 +1137,42 @@ function syncBrismedBudget(){
 /* ── BRISMED SESERAHAN FORM (Add Perlengkapan with bridesmaid picker) ── */
 let brmSesStatus="Belum Dibeli";
 function buildBrismedSeserahanForm(id){
-  const ex=id?(S.brismedItems||[]).find(x=>String(x.id)===String(id)):null;
-  if(ex){brmSesStatus=ex.status;}else{brmSesStatus="Belum Dibeli";}
-  const isEdit=!!ex;
+  /* id = existing item global id for edit, null for new */
+  const isEdit=!!id;
+  if(!isEdit){brmSesStatus="Belum Dibeli";}
   const sts=[["Belum Dibeli","Belum Dibeli"],["Sedang Dikemas","Sedang Dikemas"],["Sudah Dibeli","Sudah Dibeli"],["Sudah Dihias","Sudah Dihias"],["Siap","Siap"]];
-  return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div class="modal-title">${isEdit?"Edit Perlengkapan":"Tambah Perlengkapan"}</div><button class="hicon" id="modal-close"><i class="ti ti-x"></i></button></div>
-<div style="font-size:12px;color:var(--teal);background:var(--teal-light);padding:8px 12px;border-radius:10px;margin-bottom:8px;display:flex;align-items:center;gap:6px"><i class="ti ti-users-group" style="font-size:14px"></i>Perlengkapan untuk <strong>semua bridesmaid</strong></div>
+  const brmOpts=S.brismed.map(b=>`<option value="${b.id}">${b.name}</option>`).join("");
+  if(S.brismed.length===0){
+    return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div class="modal-title">Tambah Perlengkapan</div><button class="hicon" id="modal-close"><i class="ti ti-x"></i></button></div>
+<div style="text-align:center;padding:32px 0;color:var(--gray)"><i class="ti ti-users-group" style="font-size:40px;display:block;margin-bottom:10px"></i>Tambahkan bridesmaid dulu sebelum menambah perlengkapan.</div>`;
+  }
+  return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div class="modal-title">Tambah Perlengkapan</div><button class="hicon" id="modal-close"><i class="ti ti-x"></i></button></div>
+<span class="field-label">UNTUK BRIDESMAID</span>
+<select id="m-brms-brmid" style="width:100%;border:1.5px solid var(--border);border-radius:12px;padding:10px 13px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--dark);background:var(--white);outline:none;margin-top:4px">${brmOpts}</select>
 <span class="field-label">NAMA BARANG</span>
-<input id="m-brms-name" class="input-field" placeholder="e.g., Mukena, Tas, Perhiasan" value="${ex?ex.name:""}">
-<span class="field-label">KATEGORI</span>${catTriggerHTML("brms",ex?ex.cat:"")}
+<input id="m-brms-name" class="input-field" placeholder="e.g., Mukena, Tas, Perhiasan" value="">
+<span class="field-label">KATEGORI</span>${catTriggerHTML("brms","")}
 <span class="field-label">HARGA / ESTIMASI</span>
-<div class="money-wrap"><span class="money-pfx">Rp</span><input id="m-brms-price" class="money-input" inputmode="numeric" placeholder="0" value="${ex?fmtN(ex.price):""}"></div>
+<div class="money-wrap"><span class="money-pfx">Rp</span><input id="m-brms-price" class="money-input" inputmode="numeric" placeholder="0"></div>
 <span class="field-label">LINK TOKO / SHOPEE</span>
-<div style="display:flex;gap:9px;align-items:center"><i class="ti ti-shopping-bag" style="font-size:17px;color:var(--gray)"></i><input id="m-brms-link" class="input-field" placeholder="https://shopee.co.id/..." value="${ex&&ex.link?ex.link:""}"></div>
+<div style="display:flex;gap:9px;align-items:center"><i class="ti ti-shopping-bag" style="font-size:17px;color:var(--gray)"></i><input id="m-brms-link" class="input-field" placeholder="https://shopee.co.id/..."></div>
 <span class="field-label">STATUS</span>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">${sts.map(([v,lbl])=>`<div class="rsvp-seg${brmSesStatus===v?" active":""}" data-brms-st="${v}">${lbl}</div>`).join("")}</div>
-${isEdit?`<button class="btn-danger" data-del="brismed-shared-item" data-item-id="${id}"><i class="ti ti-trash" style="font-size:15px"></i>Hapus Perlengkapan</button>`:""}
-<button class="btn-primary" data-save="brismed-ses"><i class="ti ti-device-floppy" style="font-size:15px"></i>${isEdit?"Simpan Perubahan":"Tambah Perlengkapan"}</button>`;
+<button class="btn-primary" data-save="brismed-ses"><i class="ti ti-device-floppy" style="font-size:15px"></i>Tambah Perlengkapan</button>`;
 }
-function saveBrismedSeserahan(id){
+function saveBrismedSeserahan(){
+  const brmId=(document.getElementById("m-brms-brmid")||{}).value||"";
+  const brm=S.brismed.find(x=>String(x.id)===String(brmId));
+  if(!brm){showToast("Pilih bridesmaid terlebih dahulu");return;}
   const name=(document.getElementById("m-brms-name").value||"").trim();
   if(!name){showToast(L("fillName"));return;}
   const cat=(document.getElementById("cat-hid-brms")||{}).value||"Lain-Lain";
   const price=moneyVal("m-brms-price");
   const link=(document.getElementById("m-brms-link").value||"").trim();
-  if(!S.brismedItems)S.brismedItems=[];
-  if(id){
-    const ex=S.brismedItems.find(x=>String(x.id)===String(id));
-    if(ex)Object.assign(ex,{name,cat,price,status:brmSesStatus,link});
-    showToast("Perlengkapan diperbarui");addNotif("Perlengkapan diperbarui","ti-package");
-  }else{
-    S.brismedItems.push({id:Date.now(),name,cat,price,status:brmSesStatus,link});
-    showToast("Perlengkapan ditambahkan");addNotif("Perlengkapan baru ditambahkan","ti-package");
-  }
+  if(!brm.items)brm.items=[];
+  brm.items.push({id:Date.now(),name,cat,price,status:brmSesStatus,link});
+  syncBrismedBudget();
+  showToast("Perlengkapan ditambahkan untuk "+brm.name);
   closeModal();renderPage("tamu");
 }
 
@@ -1310,8 +1198,8 @@ function saveDoc(id){
   if(!name){showToast(L("fillName"));return;}
   const desc=(document.getElementById("m-doc-desc").value||"");
   const notes=(document.getElementById("m-doc-notes").value||"");
-  if(id){const d=S.documents.find(x=>String(x.id)===String(id));if(d)Object.assign(d,{name,desc,status:docSt,notes});showToast(L("docUpdated"));addNotif("Dokumen berhasil diperbarui","ti-file-check");}
-  else{S.documents.push({id:Date.now(),name,desc,status:docSt,notes});showToast(L("docAdded"));addNotif("Dokumen baru ditambahkan","ti-file-check");}
+  if(id){const d=S.documents.find(x=>String(x.id)===String(id));if(d)Object.assign(d,{name,desc,status:docSt,notes});showToast(L("docUpdated"));}
+  else{S.documents.push({id:Date.now(),name,desc,status:docSt,notes});showToast(L("docAdded"));}
   closeModal();renderPage("dokumen");
 }
 
@@ -1360,8 +1248,8 @@ function saveVendor(id){
   const notes=(document.getElementById("m-v-notes").value||"");
   const link=(document.getElementById("m-v-link").value||"").trim();
   const photo=vendorPhoto;
-  if(id){const v=S.vendors.find(x=>String(x.id)===String(id));if(v)Object.assign(v,{name,cat,desc,phone,email,cost,ok:vOk,notes,link,photo});showToast(L("vendorUpdated"));addNotif("Vendor berhasil diperbarui","ti-building-store");}
-  else{S.vendors.push({id:Date.now(),name,cat,desc,phone,email,cost,ok:false,notes,link,photo});showToast(L("vendorAdded"));addNotif("Vendor baru ditambahkan","ti-building-store");}
+  if(id){const v=S.vendors.find(x=>String(x.id)===String(id));if(v)Object.assign(v,{name,cat,desc,phone,email,cost,ok:vOk,notes,link,photo});showToast(L("vendorUpdated"));}
+  else{S.vendors.push({id:Date.now(),name,cat,desc,phone,email,cost,ok:false,notes,link,photo});showToast(L("vendorAdded"));}
   closeModal();renderPage("vendor");vendorPhoto=null;
 }
 
@@ -1928,7 +1816,6 @@ function launchApp(){
   applyDark();applyLang();
   initTabs();
   renderPage("ringkasan");
-  updateNotifDot();
 }
 
 /* ── Logout ── */
@@ -1995,7 +1882,7 @@ document.addEventListener("click",function(e){
   /* --- delItem --- */
   var _del=delItem;
   delItem=function(type,id){
-    const map={tx:"transactions",ses:"seserahan",guest:"guests",doc:"documents",vendor:"vendors",brismed:"brismed","brismed-shared-item":"brismedItems"};
+    const map={tx:"transactions",ses:"seserahan",guest:"guests",doc:"documents",vendor:"vendors",brismed:"brismed"};
     if(!confirm(L("itemDeleted")+"?"))return;
     if(map[type])S[map[type]]=S[map[type]].filter(x=>String(x.id)!==String(id));
     if(type==="brismed"){syncBrismedBudget();}
