@@ -17,17 +17,17 @@
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--rose:#7D3C52;--rose-light:#F5D6E3;--rose-dark:#5C2A3C;--rose-mid:#C0637D;--teal:#3D7A6E;--teal-light:#E2F5F0;--teal-dark:#2A5C52;--cream:#FAF8F5;--white:#FFFFFF;--border:#E5DDD6;--border-light:#EEE8E2;--gray:#6B6460;--gray-light:#F0EBE6;--dark:#2C1A14;--pink-bg:#FDE8F2;--pink-card:#F9EEF4;--amber-bg:#FEF3E2;--amber:#8B5E1A;--success-bg:#E2F5F0;--success:#1A6B55;--danger-bg:#FFECEC;--danger:#8B2020;--bg-page:#E0D8D0;--shadow:rgba(0,0,0,.15);}
 .dark{--cream:#1A1410;--white:#242018;--border:#3A3028;--border-light:#302820;--gray:#A8A098;--gray-light:#2E2820;--dark:#F0EAE0;--pink-bg:#2E1820;--pink-card:#281618;--amber-bg:#2A200A;--amber:#D4A050;--success-bg:#0E2018;--success:#4ACC8A;--danger-bg:#200A0A;--danger:#FF6B6B;--bg-page:#100C08;--rose-light:#3A1828;--teal-light:#0E2018;}
-html,body{height:100%;background:var(--bg-page);transition:background .3s}
+html,body{height:100%;height:100dvh;margin:0;padding:0;background:var(--bg-page);transition:background .3s;overflow:hidden}
 body{font-family:"DM Sans",sans-serif;color:var(--dark);overflow-x:hidden;transition:color .3s}
-.app{display:flex;flex-direction:column;height:100vh;max-width:480px;margin:0 auto;background:var(--cream);box-shadow:0 0 60px var(--shadow);transition:background .3s}
+.app{display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:480px;margin:0 auto;background:var(--cream);box-shadow:0 0 60px var(--shadow);transition:background .3s;overflow:hidden}
 .header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px 12px;background:var(--white);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:60;flex-shrink:0;transition:background .3s}
 .brand{font-family:"Cormorant Garamond",serif;font-size:20px;color:var(--teal);font-style:italic;font-weight:600;letter-spacing:.5px}
 .hicons{display:flex;gap:6px}
 .hicon{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--white);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--gray);transition:all .2s;flex-shrink:0}
 .hicon:hover{background:var(--gray-light);color:var(--dark)}
-.screen{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding-bottom:10px}
+.screen{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding-bottom:80px;-webkit-overflow-scrolling:touch}
 .screen::-webkit-scrollbar{display:none}
-.tabbar{display:flex;background:var(--white);border-top:1px solid var(--border);flex-shrink:0;transition:background .3s}
+.tabbar{display:flex;background:var(--white);border-top:1px solid var(--border);flex-shrink:0;transition:background .3s;padding-bottom:env(safe-area-inset-bottom,0px)}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 0 10px;cursor:pointer;font-size:8px;color:var(--gray);gap:3px;border-top:2px solid transparent;transition:all .2s;letter-spacing:.2px;text-transform:uppercase;font-weight:500;user-select:none}
 .tab.active{color:var(--teal);border-top-color:var(--teal)}
 .tab i{font-size:18px;line-height:1}
@@ -223,6 +223,7 @@ const S={
   tamuTab:"tamu",
   brmSubTab:"nama",
   brismed:[],
+  brismedItems:[],
   profilePhoto:"Foto_Profil.jpeg"||null,coverPhoto:"Cover_Profil.jpeg"||null
 };
 
@@ -383,6 +384,7 @@ function bindListEvents(){
   document.querySelectorAll("[data-edit-ses]").forEach(b=>{ b.onclick=()=>openModal("ses",b.dataset.editSes); });
   document.querySelectorAll("[data-edit-guest]").forEach(b=>{ b.onclick=()=>openModal("guest",b.dataset.editGuest); });
   document.querySelectorAll("[data-edit-doc]").forEach(b=>{ b.onclick=()=>openModal("doc",b.dataset.editDoc); });
+  document.querySelectorAll("[data-edit-brmsi]").forEach(b=>{b.onclick=()=>openModal("brismed-ses",b.dataset.editBrmsi);});
   document.querySelectorAll("[data-edit-vendor]").forEach(b=>{ b.onclick=()=>openModal("vendor",b.dataset.editVendor); });
   document.querySelectorAll("[data-ok-vendor]").forEach(b=>{ b.onclick=()=>{const v=S.vendors.find(x=>String(x.id)===String(b.dataset.okVendor));if(v){v.ok=!v.ok;refreshVendorList();}}; });
   document.querySelectorAll("[data-cycle-doc]").forEach(b=>{ b.onclick=()=>cycleDoc(b.dataset.cycleDoc); });
@@ -600,14 +602,12 @@ function pgBrismedTamu(){
 
 function pgBrismedPage(){
   const totalBrm=S.brismed.length;
-  const allItems=S.brismed.flatMap(b=>b.items||[]);
+  const allItems=S.brismedItems||[];
   const doneItems=allItems.filter(i=>["Siap","Sudah Dibeli","Sudah Dihias"].includes(i.status)).length;
   const totalCost=allItems.reduce((a,i)=>a+i.price,0);
   const pct=Math.round(doneItems/Math.max(allItems.length,1)*100);
   const brmSubTab=S.brmSubTab||"nama";
-  const sharedItems={};
-  S.brismed.forEach(b=>(b.items||[]).forEach(i=>{if(!sharedItems[i.name])sharedItems[i.name]={name:i.name,cat:i.cat,price:i.price,status:i.status,link:i.link||"",instances:[]};sharedItems[i.name].instances.push({brmId:b.id,brmName:b.name,itemId:i.id,status:i.status});}));
-  const sharedList=Object.values(sharedItems);
+  const sharedList=S.brismedItems||[];
   return `<div class="card" style="margin-top:4px"><div style="font-size:10px;font-weight:600;color:var(--gray);letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px">Progress Bridesmaid</div><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-weight:600;font-size:14px">${doneItems} / ${allItems.length} Perlengkapan Siap</span><span style="font-size:13px;color:var(--gray)">${pct}%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div></div>
   <div class="grad-card"><div style="font-size:10px;font-weight:600;color:var(--rose-mid);letter-spacing:.6px;text-transform:uppercase;margin-bottom:4px">Estimasi Total Biaya</div><div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--rose-dark);margin-top:2px">${fmt(totalCost)}</div><div style="font-size:12.5px;color:var(--teal);margin-top:5px;display:flex;align-items:center;gap:4px"><i class="ti ti-circle-check" style="font-size:14px"></i>${totalBrm} Bridesmaid &middot; ${allItems.length} item total</div></div>
   <div style="display:flex;background:var(--gray-light);border-radius:14px;padding:4px;margin:0 14px 14px">
@@ -620,8 +620,8 @@ function pgBrismedPage(){
       :S.brismed.map(b=>brismedPersonCard(b)).join("") )
     :( sharedList.length===0
       ?`<div class="card" style="text-align:center;padding:32px 16px;color:var(--gray)"><i class="ti ti-package" style="font-size:36px;display:block;margin-bottom:8px"></i>Belum ada perlengkapan</div>`
-      :sharedList.map(item=>{const refId="brm_item_"+item.name.replace(/\s/g,"_");const paid=getPaidAmount(refId);const warn=getBudgetWarning(item.price,paid);const pcti=item.price>0?Math.min(100,Math.round(paid/item.price*100)):0;const doneCount=item.instances.filter(x=>["Siap","Sudah Dibeli","Sudah Dihias"].includes(x.status)).length;return`<div class="card"><div style="display:flex;align-items:flex-start;gap:10px"><div style="width:42px;height:42px;border-radius:12px;background:var(--gray-light);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${catIcon(item.cat)}" style="font-size:20px;color:var(--gray)"></i></div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="font-weight:600;font-size:14px">${item.name}</div><span class="badge ${warn.cls}" style="font-size:10px;flex-shrink:0"><i class="ti ${warn.ic}" style="font-size:9px"></i> ${warn.label}</span></div><div style="font-size:12px;color:var(--gray);margin-top:2px">${item.cat}</div><div style="font-size:11.5px;color:var(--gray);margin-top:4px">${doneCount}/${item.instances.length} siap &middot; ${item.instances.map(x=>x.brmName).join(", ")}</div>${item.link?`<a href="${item.link}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--rose-dark);text-decoration:none;background:var(--pink-bg);padding:3px 9px;border-radius:20px;border:1px solid var(--rose-light);margin-top:5px"><i class="ti ti-shopping-bag" style="font-size:11px"></i>Beli di Toko</a>`:""}
-<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-light)"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:11px;color:var(--gray)">Anggaran: <span style="font-weight:700;color:var(--dark)">${fmt(item.price)}</span></span><span style="font-size:11px;color:var(--gray)">Terpakai: <span style="font-weight:600;color:var(--dark)">${fmt(paid)}</span></span></div><div class="progress-bar" style="height:4px"><div class="progress-fill" style="width:${pcti}%;background:${warn.label==="Overbudget"?"var(--danger)":warn.label==="Cukup"?"var(--amber)":"var(--teal)"}"></div></div></div>
+      :sharedList.map(item=>{const stBadge={"Siap":"badge-ok","Sudah Dibeli":"badge-ok","Sudah Dihias":"badge-ok","Sedang Dikemas":"badge-warn","Belum Dibeli":"badge-gray"};const badgeCls=stBadge[item.status]||"badge-gray";return`<div class="card"><div style="display:flex;align-items:flex-start;gap:10px"><div style="width:42px;height:42px;border-radius:12px;background:var(--gray-light);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${catIcon(item.cat)}" style="font-size:20px;color:var(--gray)"></i></div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="font-weight:600;font-size:14px">${item.name}</div><button class="edit-btn" data-edit-brmsi="${item.id}"><i class="ti ti-pencil" style="font-size:13px"></i></button></div><div style="font-size:12px;color:var(--gray);margin-top:2px">${item.cat}</div><div style="margin-top:5px"><span class="badge ${badgeCls}" style="font-size:11px">${item.status}</span></div>${item.link?`<a href="${item.link}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--rose-dark);text-decoration:none;background:var(--pink-bg);padding:3px 9px;border-radius:20px;border:1px solid var(--rose-light);margin-top:6px"><i class="ti ti-shopping-bag" style="font-size:11px"></i>Beli di Toko</a>`:""}
+<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-light)"><span style="font-size:12px;font-weight:600;color:var(--dark)">${fmt(item.price)}</span></div>
 </div></div></div>`;}).join("") )}
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:4px 14px 0">
     <button class="btn-primary" style="margin:0;background:linear-gradient(135deg,var(--rose-dark),var(--teal-dark))" id="fab-bridesmaid"><i class="ti ti-user-plus" style="font-size:15px"></i>Bridesmaid</button>
@@ -724,6 +724,7 @@ function bindModalEvents(type,id,brmId){
   const delBtn=mc.querySelector("[data-del]");
   if(delBtn)delBtn.onclick=()=>{
     if(type==="brismed-item")delBrismedItem(_brmId,_itemId);
+    else if(delBtn.dataset.del==="brismed-shared-item")delItem("brismed-shared-item",delBtn.dataset.itemId);
     else delItem(delBtn.dataset.del,id);
   };
   const savBtn=mc.querySelector("[data-save]");if(savBtn)savBtn.onclick=()=>{
@@ -735,7 +736,7 @@ function bindModalEvents(type,id,brmId){
     else if(t==="vendor")saveVendor(id);
     else if(t==="brismed")saveBrismed(id);
     else if(t==="brismed-item")saveBrismedItem(_brmId,_itemId||null);
-    else if(t==="brismed-ses")saveBrismedSeserahan();
+    else if(t==="brismed-ses")saveBrismedSeserahan(id);
   };
   mc.querySelectorAll("[data-tx-type]").forEach(p=>{p.onclick=()=>{switchTxType(p.dataset.txType);};});
   mc.querySelectorAll("[data-tx-st]").forEach(p=>{p.onclick=()=>{txStatus=p.dataset.txSt;mc.querySelectorAll("[data-tx-st]").forEach(x=>x.classList.toggle("active",x===p));};});
@@ -781,7 +782,7 @@ function delBrismedItem(brmId,itemId){
 
 function delItem(type,id){
   if(!confirm(L("itemDeleted")+"?"))return;
-  const map={tx:"transactions",ses:"seserahan",guest:"guests",doc:"documents",vendor:"vendors",brismed:"brismed"};
+  const map={tx:"transactions",ses:"seserahan",guest:"guests",doc:"documents",vendor:"vendors",brismed:"brismed","brismed-shared-item":"brismedItems"};
   if(map[type])S[map[type]]=S[map[type]].filter(x=>String(x.id)!==String(id));
   if(type==="brismed"){syncBrismedBudget();}
   closeModal();renderPage(curTab);showToast(L("itemDeleted"));
@@ -1137,42 +1138,39 @@ function syncBrismedBudget(){
 /* ── BRISMED SESERAHAN FORM (Add Perlengkapan with bridesmaid picker) ── */
 let brmSesStatus="Belum Dibeli";
 function buildBrismedSeserahanForm(id){
-  /* id = existing item global id for edit, null for new */
-  const isEdit=!!id;
-  if(!isEdit){brmSesStatus="Belum Dibeli";}
+  const ex=id?(S.brismedItems||[]).find(x=>String(x.id)===String(id)):null;
+  if(ex){brmSesStatus=ex.status;}else{brmSesStatus="Belum Dibeli";}
+  const isEdit=!!ex;
   const sts=[["Belum Dibeli","Belum Dibeli"],["Sedang Dikemas","Sedang Dikemas"],["Sudah Dibeli","Sudah Dibeli"],["Sudah Dihias","Sudah Dihias"],["Siap","Siap"]];
-  const brmOpts=S.brismed.map(b=>`<option value="${b.id}">${b.name}</option>`).join("");
-  if(S.brismed.length===0){
-    return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div class="modal-title">Tambah Perlengkapan</div><button class="hicon" id="modal-close"><i class="ti ti-x"></i></button></div>
-<div style="text-align:center;padding:32px 0;color:var(--gray)"><i class="ti ti-users-group" style="font-size:40px;display:block;margin-bottom:10px"></i>Tambahkan bridesmaid dulu sebelum menambah perlengkapan.</div>`;
-  }
-  return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div class="modal-title">Tambah Perlengkapan</div><button class="hicon" id="modal-close"><i class="ti ti-x"></i></button></div>
-<span class="field-label">UNTUK BRIDESMAID</span>
-<select id="m-brms-brmid" style="width:100%;border:1.5px solid var(--border);border-radius:12px;padding:10px 13px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--dark);background:var(--white);outline:none;margin-top:4px">${brmOpts}</select>
+  return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div class="modal-title">${isEdit?"Edit Perlengkapan":"Tambah Perlengkapan"}</div><button class="hicon" id="modal-close"><i class="ti ti-x"></i></button></div>
+<div style="font-size:12px;color:var(--teal);background:var(--teal-light);padding:8px 12px;border-radius:10px;margin-bottom:8px;display:flex;align-items:center;gap:6px"><i class="ti ti-users-group" style="font-size:14px"></i>Perlengkapan untuk <strong>semua bridesmaid</strong></div>
 <span class="field-label">NAMA BARANG</span>
-<input id="m-brms-name" class="input-field" placeholder="e.g., Mukena, Tas, Perhiasan" value="">
-<span class="field-label">KATEGORI</span>${catTriggerHTML("brms","")}
+<input id="m-brms-name" class="input-field" placeholder="e.g., Mukena, Tas, Perhiasan" value="${ex?ex.name:""}">
+<span class="field-label">KATEGORI</span>${catTriggerHTML("brms",ex?ex.cat:"")}
 <span class="field-label">HARGA / ESTIMASI</span>
-<div class="money-wrap"><span class="money-pfx">Rp</span><input id="m-brms-price" class="money-input" inputmode="numeric" placeholder="0"></div>
+<div class="money-wrap"><span class="money-pfx">Rp</span><input id="m-brms-price" class="money-input" inputmode="numeric" placeholder="0" value="${ex?fmtN(ex.price):""}"></div>
 <span class="field-label">LINK TOKO / SHOPEE</span>
-<div style="display:flex;gap:9px;align-items:center"><i class="ti ti-shopping-bag" style="font-size:17px;color:var(--gray)"></i><input id="m-brms-link" class="input-field" placeholder="https://shopee.co.id/..."></div>
+<div style="display:flex;gap:9px;align-items:center"><i class="ti ti-shopping-bag" style="font-size:17px;color:var(--gray)"></i><input id="m-brms-link" class="input-field" placeholder="https://shopee.co.id/..." value="${ex&&ex.link?ex.link:""}"></div>
 <span class="field-label">STATUS</span>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">${sts.map(([v,lbl])=>`<div class="rsvp-seg${brmSesStatus===v?" active":""}" data-brms-st="${v}">${lbl}</div>`).join("")}</div>
-<button class="btn-primary" data-save="brismed-ses"><i class="ti ti-device-floppy" style="font-size:15px"></i>Tambah Perlengkapan</button>`;
+${isEdit?`<button class="btn-danger" data-del="brismed-shared-item" data-item-id="${id}"><i class="ti ti-trash" style="font-size:15px"></i>Hapus Perlengkapan</button>`:""}
+<button class="btn-primary" data-save="brismed-ses"><i class="ti ti-device-floppy" style="font-size:15px"></i>${isEdit?"Simpan Perubahan":"Tambah Perlengkapan"}</button>`;
 }
-function saveBrismedSeserahan(){
-  const brmId=(document.getElementById("m-brms-brmid")||{}).value||"";
-  const brm=S.brismed.find(x=>String(x.id)===String(brmId));
-  if(!brm){showToast("Pilih bridesmaid terlebih dahulu");return;}
+function saveBrismedSeserahan(id){
   const name=(document.getElementById("m-brms-name").value||"").trim();
   if(!name){showToast(L("fillName"));return;}
   const cat=(document.getElementById("cat-hid-brms")||{}).value||"Lain-Lain";
   const price=moneyVal("m-brms-price");
   const link=(document.getElementById("m-brms-link").value||"").trim();
-  if(!brm.items)brm.items=[];
-  brm.items.push({id:Date.now(),name,cat,price,status:brmSesStatus,link});
-  syncBrismedBudget();
-  showToast("Perlengkapan ditambahkan untuk "+brm.name);
+  if(!S.brismedItems)S.brismedItems=[];
+  if(id){
+    const ex=S.brismedItems.find(x=>String(x.id)===String(id));
+    if(ex)Object.assign(ex,{name,cat,price,status:brmSesStatus,link});
+    showToast("Perlengkapan diperbarui");
+  }else{
+    S.brismedItems.push({id:Date.now(),name,cat,price,status:brmSesStatus,link});
+    showToast("Perlengkapan ditambahkan");
+  }
   closeModal();renderPage("tamu");
 }
 
@@ -1882,7 +1880,7 @@ document.addEventListener("click",function(e){
   /* --- delItem --- */
   var _del=delItem;
   delItem=function(type,id){
-    const map={tx:"transactions",ses:"seserahan",guest:"guests",doc:"documents",vendor:"vendors",brismed:"brismed"};
+    const map={tx:"transactions",ses:"seserahan",guest:"guests",doc:"documents",vendor:"vendors",brismed:"brismed","brismed-shared-item":"brismedItems"};
     if(!confirm(L("itemDeleted")+"?"))return;
     if(map[type])S[map[type]]=S[map[type]].filter(x=>String(x.id)!==String(id));
     if(type==="brismed"){syncBrismedBudget();}
