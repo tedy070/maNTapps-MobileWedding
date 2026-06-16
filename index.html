@@ -219,7 +219,10 @@ const S={
   ],
   notif:{budgEmail:true,budgPush:true,rsvpEmail:true,rsvpPush:true,docEmail:true,docPush:false,vendEmail:false,vendPush:false},
   darkMode:false,lang:"id",
-  budFilter:"semua",sesFilter:"Semua",guestSearch:"",vendSearch:"",
+  budFilter:"semua",sesFilter:"Semua",guestSearch:"",guestFilter:"Semua",vendSearch:"",
+  tamuTab:"tamu",
+  brmSubTab:"nama",
+  brismed:[],
   profilePhoto:"Foto_Profil.jpeg"||null,coverPhoto:"Cover_Profil.jpeg"||null
 };
 
@@ -240,6 +243,7 @@ const CATS=[
   {id:"Fotografer",name:"Fotografer",sub:"Foto & Video",icon:"ti-camera",bg:"#F5F0FE",ic:"#6A3AAF"},
   {id:"Catering",name:"Catering",sub:"Makanan & Minuman",icon:"ti-tools-kitchen-2",bg:"#FEF3E2",ic:"#8B5E1A"},
   {id:"Busana",name:"Busana",sub:"Gaun & Jas Pengantin",icon:"ti-shirt",bg:"#F0F7F4",ic:"#2A7A5C"},
+  {id:"Bridesmaid",name:"Bridesmaid",sub:"Perlengkapan Bridesmaid",icon:"ti-dress",bg:"#FDE8F2",ic:"#C0637D"},
   {id:"Lain-Lain",name:"Lain-Lain",sub:"Kategori Lainnya",icon:"ti-box",bg:"#F0EBE6",ic:"#6B6460"}
 ];
 const CMAP=Object.fromEntries(CATS.map(c=>[c.id,c]));
@@ -253,10 +257,12 @@ const sIcon=s=>SICON[s]||"ti-circle";
 const rsvpIcon=r=>r==="Hadir"?"ti-circle-check":r==="Menunggu"?"ti-clock":"ti-circle-x";
 
 let curTab="ringkasan",toastTmr=null;
-let txType="out",txStatus="Belum Dibayar";
+let txType="out",txStatus="Belum Dibayar",txPaySearch="",txPaySel=null;
 let sesParty="Pria",sesStatus="Belum Dibeli";
 let gGroup="Keluarga",gRsvp="Menunggu",gCount=1,gVip=false;
 let docSt="Belum Diurus",vOk=false,selTheme=null;
+let brmGGroup="Keluarga",brmGRsvp="Menunggu",brmGCount=1,brmGVip=false;
+let brmItemStatus="Belum Dibeli";
 let pickerSel="",pickerCb=null;
 let vendorPhoto=null,fileInputCb=null;
 
@@ -277,9 +283,31 @@ function pickPhoto(cb){fileInputCb=cb;document.getElementById("file-input").clic
 function bindMoney(id){const el=document.getElementById(id);if(el)el.addEventListener("input",function(){this.value=fmtMoney(this.value);});}
 function moneyVal(id){return parseMoney((document.getElementById(id)||{}).value||"");}
 
+/* ── Budget items for payment dropdown ── */
+function getBudgetItems(){
+  const items=[];
+  S.seserahan.forEach(i=>items.push({id:"ses_"+i.id,label:i.name,type:"Seserahan",price:i.price,ref:{col:"seserahan",id:i.id}}));
+  const brmItems={};
+  S.brismed.forEach(b=>(b.items||[]).forEach(i=>{const key=i.name;if(!brmItems[key])brmItems[key]={id:"brm_item_"+i.name.replace(/\s/g,"_"),label:i.name,type:"Bridesmaid",price:i.price,ref:{col:"bridesmaid_item",name:i.name}};else if(i.price>brmItems[key].price)brmItems[key].price=i.price;}));
+  Object.values(brmItems).forEach(i=>items.push(i));
+  S.vendors.forEach(v=>items.push({id:"vnd_"+v.id,label:v.name,type:"Vendor",price:v.cost,ref:{col:"vendors",id:v.id}}));
+  return items;
+}
+/* Get total paid for a specific budget item */
+function getPaidAmount(refId){
+  return S.transactions.filter(tx=>tx.type==="pay"&&tx.payRefId===refId).reduce((a,t)=>a+t.amount,0);
+}
+/* Warning level: Aman / Cukup / Overbudget */
+function getBudgetWarning(budget,paid){
+  const pct=budget>0?paid/budget:0;
+  if(pct<=0.7)return{label:"Aman",cls:"badge-green",ic:"ti-shield-check",color:"var(--success)"};
+  if(pct<=1)return{label:"Cukup",cls:"badge-amber",ic:"ti-alert-triangle",color:"var(--amber)"};
+  return{label:"Overbudget",cls:"badge-red",ic:"ti-alert-circle",color:"var(--danger)"};
+}
+
 /* ── Totals ── */
 function totals(){
-  const out=S.transactions.filter(t=>t.type==="out").reduce((a,t)=>a+t.amount,0);
+  const out=S.transactions.filter(t=>t.type==="out"||t.type==="pay").reduce((a,t)=>a+t.amount,0);
   const xIn=S.transactions.filter(t=>t.type==="in").reduce((a,t)=>a+t.amount,0);
   const docDone=S.documents.filter(d=>d.status==="Selesai").length;
   const docPct=Math.round(docDone/Math.max(S.documents.length,1)*100);
@@ -360,18 +388,51 @@ function bindListEvents(){
   document.querySelectorAll("[data-cycle-doc]").forEach(b=>{ b.onclick=()=>cycleDoc(b.dataset.cycleDoc); });
   document.querySelectorAll("[data-bud-filter]").forEach(b=>{ b.onclick=()=>{S.budFilter=b.dataset.budFilter;renderPage("anggaran");}; });
   document.querySelectorAll("[data-ses-filter]").forEach(b=>{ b.onclick=()=>{S.sesFilter=b.dataset.sesFilter;renderPage("seserahan");}; });
+  document.querySelectorAll("[data-guest-filter]").forEach(b=>{ b.onclick=()=>{S.guestFilter=b.dataset.guestFilter;refreshGuestList();}; });
+  /* Brismed events */
+  document.querySelectorAll("[data-edit-brm-person]").forEach(b=>{ b.onclick=()=>openModal("brismed",b.dataset.editBrmPerson); });
+  document.querySelectorAll("[data-add-brm-item]").forEach(b=>{ b.onclick=()=>openModal("brismed-item",b.dataset.addBrmItem); });
+  document.querySelectorAll("[data-edit-brm-item]").forEach(b=>{ b.onclick=()=>openModal("brismed-item",b.dataset.itemId,b.dataset.editBrmItem); });
+  /* Tab switch */
+  const btnTamu=document.getElementById("btn-tamu-tab");
+  if(btnTamu)btnTamu.onclick=()=>{S.tamuTab="tamu";renderPage("tamu");};
+  const btnBrismed=document.getElementById("btn-bridesmaid-tab");
+  if(btnBrismed)btnBrismed.onclick=()=>{S.tamuTab="bridesmaid";renderPage("tamu");};
+  /* Bridesmaid sub-tab */
+  const btnBrmNama=document.getElementById("btn-brmsub-nama");
+  if(btnBrmNama)btnBrmNama.onclick=()=>{S.brmSubTab="nama";renderPage("tamu");};
+  const btnBrmPerl=document.getElementById("btn-brmsub-perlengkapan");
+  if(btnBrmPerl)btnBrmPerl.onclick=()=>{S.brmSubTab="perlengkapan";renderPage("tamu");};
+  /* FABs */
   const fabTx=document.getElementById("fab-tx");if(fabTx)fabTx.onclick=()=>openModal("tx",null);
   const fabSes=document.getElementById("fab-ses");if(fabSes)fabSes.onclick=()=>openModal("ses",null);
   const fabDoc=document.getElementById("fab-doc");if(fabDoc)fabDoc.onclick=()=>openModal("doc",null);
   const fabV=document.getElementById("fab-vendor");if(fabV)fabV.onclick=()=>openModal("vendor",null);
+  const fabBrm=document.getElementById("fab-brismed")||document.getElementById("fab-bridesmaid");
+  if(fabBrm)fabBrm.onclick=()=>openModal("brismed",null);
+  const fabBrmSes=document.getElementById("fab-brismed-ses");
+  if(fabBrmSes)fabBrmSes.onclick=()=>openModal("brismed-ses",null);
   const bAG=document.getElementById("btn-add-guest");if(bAG)bAG.onclick=()=>openModal("guest",null);
   const seeAll=document.getElementById("see-all-vendors");if(seeAll)seeAll.onclick=()=>document.getElementById("tab-vendor").click();
 }
 
 function refreshGuestList(){
-  const q=S.guestSearch.toLowerCase();
-  const filtered=S.guests.filter(g=>!q||g.name.toLowerCase().includes(q)||g.group.toLowerCase().includes(q));
+  const q=S.guestSearch.toLowerCase();const gf=S.guestFilter||"Semua";
+  const filtered=S.guests.filter(g=>{
+    const mq=!q||g.name.toLowerCase().includes(q)||g.group.toLowerCase().includes(q);
+    const mf=gf==="Semua"||g.group===gf;
+    return mq&&mf;
+  });
   const el=document.getElementById("guest-list");if(el){el.innerHTML=filtered.map(guestCard).join("");bindListEvents();}
+  /* refresh pill counts */
+  const GFILTERS=[["Semua","Semua"],["Keluarga","Keluarga"],["Teman Wanita","Teman Wanita"],["Teman Pria","Teman Pria"],["Lainnya","Lainnya"]];
+  const countF=f=>S.guests.filter(g=>f==="Semua"||g.group===f).reduce((a,g)=>a+g.count,0);
+  document.querySelectorAll("[data-guest-filter]").forEach(p=>{
+    const v=p.dataset.guestFilter;
+    const lbl=GFILTERS.find(([fv])=>fv===v);
+    if(lbl)p.innerHTML=lbl[1]+` <span style="font-size:10px;opacity:.75">(${countF(v)})</span>`;
+    p.classList.toggle("active",v===gf);
+  });
 }
 function refreshVendorList(){
   const q=S.vendSearch.toLowerCase();
@@ -465,7 +526,7 @@ function pgRingkasan(){
 
 function pgAnggaran(){
   const t=totals();const allIn=S.income+t.xIn;
-  const txs=S.transactions.filter(tx=>S.budFilter==="semua"||(S.budFilter==="pemasukan"&&tx.type==="in")||(S.budFilter==="pengeluaran"&&tx.type==="out"));
+  const txs=S.transactions.filter(tx=>S.budFilter==="semua"||(S.budFilter==="pemasukan"&&tx.type==="in")||(S.budFilter==="pengeluaran"&&(tx.type==="out"||tx.type==="pay")));
   const groups={};txs.forEach(tx=>{const k=tx.date.substring(0,7);if(!groups[k]){const d=new Date(tx.date+"T00:00:00");groups[k]={label:d.toLocaleDateString("id-ID",{month:"long",year:"numeric"}).toUpperCase(),items:[]};}groups[k].items.push(tx);});
   const sorted=Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(k=>groups[k]);
   return `<div style="padding:18px 20px 0"><div class="section-head" style="margin-bottom:4px">${L("ledger")}</div><div style="font-size:13px;color:var(--gray);margin-bottom:14px">${L("ledgerSub")}</div></div>
@@ -491,8 +552,8 @@ function pgSeserahan(){
   <div class="card"><div style="font-size:10px;font-weight:600;color:var(--gray);letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px">${L("overallProgress")}</div><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-weight:600;font-size:14px">${t.sesDone} / ${S.seserahan.length} ${L("itemsReady")}</span><span style="font-size:13px;color:var(--gray)">${pct}%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div></div>
   <div class="grad-card"><div style="font-size:10px;font-weight:600;color:var(--rose-mid);letter-spacing:.6px;text-transform:uppercase;margin-bottom:4px">${L("estimatedCost")}</div><div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--rose-dark);margin-top:2px">${fmt(t.sesCost)}</div><div style="font-size:12.5px;color:var(--teal);margin-top:5px;display:flex;align-items:center;gap:4px"><i class="ti ti-circle-check" style="font-size:14px"></i>${L("withinBudget")}</div></div>
   <div class="pill-row">${[[L("allParty"),"Semua"],[L("male"),"Pria"],[L("female"),"Wanita"],[L("dowry"),"Mahar"]].map(([lbl,v])=>`<span class="pill${S.sesFilter===v?" active":""}" data-ses-filter="${v}">${lbl}</span>`).join("")}</div>
-  ${items.map(item=>`<div class="card"><div style="display:flex;gap:12px"><div style="width:48px;height:48px;border-radius:13px;background:var(--gray-light);display:flex;align-items:center;justify-content:center;color:var(--gray);flex-shrink:0"><i class="ti ${catIcon(item.cat)}" style="font-size:22px"></i></div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="font-weight:600;font-size:14px">${item.name}</div><span class="badge ${sCls(item.status)}" style="flex-shrink:0"><i class="ti ${sIcon(item.status)}" style="font-size:10px"></i> ${item.status}</span></div><div style="font-size:12px;color:var(--gray);margin-top:2px">${item.cat} &middot; ${item.party}</div>${item.link?`<div style="margin-top:6px"><a href="${item.link}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--rose-dark);text-decoration:none;background:var(--pink-bg);padding:4px 10px;border-radius:20px;border:1px solid var(--rose-light)"><i class="ti ti-shopping-bag" style="font-size:12px"></i>Beli di Toko</a></div>`:""}
-<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><div style="font-size:13px;font-weight:700;color:var(--rose)">${fmt(item.price)}</div><button class="edit-btn" data-edit-ses="${item.id}"><i class="ti ti-pencil" style="font-size:13px"></i></button></div></div></div></div>`).join("")}
+  ${items.map(item=>{const refId="ses_"+item.id;const paid=getPaidAmount(refId);const warn=getBudgetWarning(item.price,paid);const pct=item.price>0?Math.min(100,Math.round(paid/item.price*100)):0;return`<div class="card"><div style="display:flex;gap:12px"><div style="width:48px;height:48px;border-radius:13px;background:var(--gray-light);display:flex;align-items:center;justify-content:center;color:var(--gray);flex-shrink:0"><i class="ti ${catIcon(item.cat)}" style="font-size:22px"></i></div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="font-weight:600;font-size:14px">${item.name}</div><span class="badge ${sCls(item.status)}" style="flex-shrink:0"><i class="ti ${sIcon(item.status)}" style="font-size:10px"></i> ${item.status}</span></div><div style="font-size:12px;color:var(--gray);margin-top:2px">${item.cat} &middot; ${item.party}</div>${item.link?`<div style="margin-top:6px"><a href="${item.link}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--rose-dark);text-decoration:none;background:var(--pink-bg);padding:4px 10px;border-radius:20px;border:1px solid var(--rose-light)"><i class="ti ti-shopping-bag" style="font-size:12px"></i>Beli di Toko</a></div>`:""}
+<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-light)"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:11px;color:var(--gray)">Anggaran: <span style="font-weight:700;color:var(--dark)">${fmt(item.price)}</span></span><span class="badge ${warn.cls}" style="font-size:10px"><i class="ti ${warn.ic}" style="font-size:9px"></i> ${warn.label}</span></div><div class="progress-bar" style="height:4px;margin-bottom:4px"><div class="progress-fill" style="width:${pct}%;background:${warn.label==="Overbudget"?"var(--danger)":warn.label==="Cukup"?"var(--amber)":"var(--teal)"}"></div></div><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:var(--gray)">Terpakai: <span style="font-weight:600;color:var(--dark)">${fmt(paid)}</span></span><button class="edit-btn" data-edit-ses="${item.id}"><i class="ti ti-pencil" style="font-size:13px"></i></button></div></div></div></div></div>`;}).join("")}
   <button class="fab" id="fab-ses"><i class="ti ti-plus" style="font-size:22px"></i></button>`;
 }
 
@@ -500,18 +561,88 @@ function guestCard(g){
   return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14.5px;margin-bottom:4px">${g.name}</div><div style="font-size:12.5px;color:var(--gray);margin-bottom:9px;display:flex;align-items:center;gap:5px"><i class="ti ${g.count>1?"ti-users":"ti-user"}" style="font-size:14px"></i>${g.count}</div><div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center"><span style="font-size:10.5px;font-weight:600;background:var(--gray-light);color:var(--gray);padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px">${g.group}</span>${g.vip?"<span style=\"font-size:10.5px;font-weight:700;background:var(--amber-bg);color:var(--amber);padding:3px 10px;border-radius:20px\">VIP</span>":""}<span class="badge ${sCls(g.rsvp)}"><i class="ti ${rsvpIcon(g.rsvp)}" style="font-size:10px"></i> ${g.rsvp}</span></div></div><button class="edit-btn" data-edit-guest="${g.id}" style="margin-top:2px"><i class="ti ti-pencil" style="font-size:13px"></i></button></div></div>`;
 }
 
-function pgTamu(){
-  const t=totals();const q=S.guestSearch.toLowerCase();
-  const filtered=S.guests.filter(g=>!q||g.name.toLowerCase().includes(q)||g.group.toLowerCase().includes(q));
-  return `<div style="padding:18px 18px 0"><div class="section-head" style="margin-bottom:14px">${L("guestMgmt")}</div></div>
-  <div style="margin:0 14px 12px"><button class="btn-primary" style="margin:0" id="btn-add-guest"><i class="ti ti-user-plus" style="font-size:16px"></i>${L("addGuest")}</button></div>
+function brismedPersonCard(b){
+  return `<div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14.5px;margin-bottom:4px">${b.name}</div><div style="font-size:12.5px;color:var(--gray);margin-bottom:7px;display:flex;align-items:center;gap:5px"><i class="ti ${b.count>1?"ti-users":"ti-user"}" style="font-size:14px"></i>${b.count} orang</div><div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center"><span style="font-size:10.5px;font-weight:600;background:var(--gray-light);color:var(--gray);padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px">${b.group}</span>${b.vip?"<span style=\"font-size:10.5px;font-weight:700;background:var(--amber-bg);color:var(--amber);padding:3px 10px;border-radius:20px\">VIP</span>":""}<span class="badge ${sCls(b.rsvp)}"><i class="ti ${rsvpIcon(b.rsvp)}" style="font-size:10px"></i> ${b.rsvp}</span></div></div><button class="edit-btn" data-edit-brm-person="${b.id}" style="margin-top:2px"><i class="ti ti-pencil" style="font-size:13px"></i></button></div></div>`;
+}
+
+function brismedItemCard(b){
+  const items=b.items||[];
+  const done=items.filter(i=>["Siap","Sudah Dibeli","Sudah Dihias"].includes(i.status)).length;
+  const total=items.length;
+  const totalCost=items.reduce((a,i)=>a+i.price,0);
+  return `<div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><div style="font-weight:700;font-size:14.5px">${b.name}</div><button class="edit-btn" data-edit-brm-person="${b.id}"><i class="ti ti-pencil" style="font-size:13px"></i></button></div>
+  ${total>0?`<div style="margin-bottom:8px"><div class="progress-bar" style="margin-bottom:4px"><div class="progress-fill" style="width:${Math.round(done/total*100)}%"></div></div><div style="font-size:11px;color:var(--gray)">${done}/${total} item siap &middot; ${fmt(totalCost)}</div></div>`:"<div style=\"font-size:12px;color:var(--gray);margin-bottom:6px\">Belum ada perlengkapan</div>"}
+  ${items.map(i=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border-light)"><div style="width:30px;height:30px;border-radius:9px;background:var(--gray-light);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${catIcon(i.cat)}" style="font-size:14px;color:var(--gray)"></i></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">${i.name}</div><div style="font-size:11px;color:var(--gray)">${fmt(i.price)}</div></div><div style="display:flex;align-items:center;gap:5px"><span class="badge ${sCls(i.status)}" style="font-size:10px"><i class="ti ${sIcon(i.status)}" style="font-size:9px"></i> ${i.status}</span>${i.link?`<a href="${i.link}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--pink-bg);border:1px solid var(--rose-light)"><i class="ti ti-shopping-bag" style="font-size:11px;color:var(--rose-dark)"></i></a>`:""}
+  <button class="edit-btn" data-edit-brm-item="${b.id}" data-item-id="${i.id}" style="width:24px;height:24px"><i class="ti ti-pencil" style="font-size:11px"></i></button></div></div>`).join("")}
+  <button style="margin-top:8px;width:100%;background:var(--pink-bg);border:1.5px dashed var(--rose-light);border-radius:10px;padding:8px;color:var(--rose-dark);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px" data-add-brm-item="${b.id}"><i class="ti ti-plus" style="font-size:13px"></i>Tambah Perlengkapan</button>
+  </div>`;
+}
+
+function pgBrismedTamu(){
+  const t=totals();const q=S.guestSearch.toLowerCase();const gf=S.guestFilter||"Semua";
+  const GFILTERS=[["Semua","Semua"],["Keluarga","Keluarga"],["Teman Wanita","Teman Wanita"],["Teman Pria","Teman Pria"],["Lainnya","Lainnya"]];
+  const countF=f=>S.guests.filter(g=>f==="Semua"||g.group===f).reduce((a,g)=>a+g.count,0);
+  const filtered=S.guests.filter(g=>{
+    const mq=!q||g.name.toLowerCase().includes(q)||g.group.toLowerCase().includes(q);
+    const mf=gf==="Semua"||g.group===gf;
+    return mq&&mf;
+  });
+  return `<div style="margin:0 14px 12px"><button class="btn-primary" style="margin:0" id="btn-add-guest"><i class="ti ti-user-plus" style="font-size:16px"></i>${L("addGuest")}</button></div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:0 14px 13px">
     <div class="stat-card" style="background:var(--white);border:1px solid var(--border)"><div class="stat-num">${t.totalG}</div><div class="stat-lbl" style="color:var(--gray)">${L("totalGuest")}</div></div>
     <div class="stat-card" style="background:var(--teal-light)"><div class="stat-num" style="color:var(--teal)">${t.hadir}</div><div class="stat-lbl" style="color:var(--teal)">${L("present")}</div></div>
     <div class="stat-card" style="background:var(--pink-bg)"><div class="stat-num" style="color:var(--rose)">${t.tunggu}</div><div class="stat-lbl" style="color:var(--rose)">${L("waiting")}</div></div>
   </div>
   <div style="margin:0 14px 12px"><div class="card-sm" style="display:flex;align-items:center;gap:9px"><i class="ti ti-search" style="font-size:17px;color:var(--gray);flex-shrink:0"></i><input id="guest-search-inp" style="border:none;outline:none;background:transparent;font-family:'DM Sans',sans-serif;font-size:13.5px;width:100%;color:var(--dark)" placeholder="${L("searchGuestPh")}" value="${S.guestSearch}"></div></div>
+  <div class="pill-row" style="padding:0 14px 10px">${GFILTERS.map(([v,lbl])=>`<span class="pill${gf===v?" active":""}" data-guest-filter="${v}">${lbl} <span style="font-size:10px;opacity:.75">(${countF(v)})</span></span>`).join("")}</div>
   <div id="guest-list">${filtered.map(guestCard).join("")}</div>`;
+}
+
+function pgBrismedPage(){
+  const totalBrm=S.brismed.length;
+  const allItems=S.brismed.flatMap(b=>b.items||[]);
+  const doneItems=allItems.filter(i=>["Siap","Sudah Dibeli","Sudah Dihias"].includes(i.status)).length;
+  const totalCost=allItems.reduce((a,i)=>a+i.price,0);
+  const pct=Math.round(doneItems/Math.max(allItems.length,1)*100);
+  const brmSubTab=S.brmSubTab||"nama";
+  const sharedItems={};
+  S.brismed.forEach(b=>(b.items||[]).forEach(i=>{if(!sharedItems[i.name])sharedItems[i.name]={name:i.name,cat:i.cat,price:i.price,status:i.status,link:i.link||"",instances:[]};sharedItems[i.name].instances.push({brmId:b.id,brmName:b.name,itemId:i.id,status:i.status});}));
+  const sharedList=Object.values(sharedItems);
+  return `<div class="card" style="margin-top:4px"><div style="font-size:10px;font-weight:600;color:var(--gray);letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px">Progress Bridesmaid</div><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-weight:600;font-size:14px">${doneItems} / ${allItems.length} Perlengkapan Siap</span><span style="font-size:13px;color:var(--gray)">${pct}%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div></div>
+  <div class="grad-card"><div style="font-size:10px;font-weight:600;color:var(--rose-mid);letter-spacing:.6px;text-transform:uppercase;margin-bottom:4px">Estimasi Total Biaya</div><div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--rose-dark);margin-top:2px">${fmt(totalCost)}</div><div style="font-size:12.5px;color:var(--teal);margin-top:5px;display:flex;align-items:center;gap:4px"><i class="ti ti-circle-check" style="font-size:14px"></i>${totalBrm} Bridesmaid &middot; ${allItems.length} item total</div></div>
+  <div style="display:flex;background:var(--gray-light);border-radius:14px;padding:4px;margin:0 14px 14px">
+    <button id="btn-brmsub-nama" style="flex:1;border:none;border-radius:11px;padding:9px 0;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;background:${brmSubTab==="nama"?"var(--white)":"transparent"};color:${brmSubTab==="nama"?"var(--teal-dark)":"var(--gray)"};box-shadow:${brmSubTab==="nama"?"0 1px 4px rgba(0,0,0,.09)":"none"}">Nama Bridesmaid</button>
+    <button id="btn-brmsub-perlengkapan" style="flex:1;border:none;border-radius:11px;padding:9px 0;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;background:${brmSubTab==="perlengkapan"?"var(--white)":"transparent"};color:${brmSubTab==="perlengkapan"?"var(--rose-dark)":"var(--gray)"};box-shadow:${brmSubTab==="perlengkapan"?"0 1px 4px rgba(0,0,0,.09)":"none"}">Perlengkapan</button>
+  </div>
+  ${brmSubTab==="nama"
+    ?( S.brismed.length===0
+      ?`<div class="card" style="text-align:center;padding:32px 16px;color:var(--gray)"><i class="ti ti-users-group" style="font-size:36px;display:block;margin-bottom:8px"></i>Belum ada bridesmaid</div>`
+      :S.brismed.map(b=>brismedPersonCard(b)).join("") )
+    :( sharedList.length===0
+      ?`<div class="card" style="text-align:center;padding:32px 16px;color:var(--gray)"><i class="ti ti-package" style="font-size:36px;display:block;margin-bottom:8px"></i>Belum ada perlengkapan</div>`
+      :sharedList.map(item=>{const refId="brm_item_"+item.name.replace(/\s/g,"_");const paid=getPaidAmount(refId);const warn=getBudgetWarning(item.price,paid);const pcti=item.price>0?Math.min(100,Math.round(paid/item.price*100)):0;const doneCount=item.instances.filter(x=>["Siap","Sudah Dibeli","Sudah Dihias"].includes(x.status)).length;return`<div class="card"><div style="display:flex;align-items:flex-start;gap:10px"><div style="width:42px;height:42px;border-radius:12px;background:var(--gray-light);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${catIcon(item.cat)}" style="font-size:20px;color:var(--gray)"></i></div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="font-weight:600;font-size:14px">${item.name}</div><span class="badge ${warn.cls}" style="font-size:10px;flex-shrink:0"><i class="ti ${warn.ic}" style="font-size:9px"></i> ${warn.label}</span></div><div style="font-size:12px;color:var(--gray);margin-top:2px">${item.cat}</div><div style="font-size:11.5px;color:var(--gray);margin-top:4px">${doneCount}/${item.instances.length} siap &middot; ${item.instances.map(x=>x.brmName).join(", ")}</div>${item.link?`<a href="${item.link}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--rose-dark);text-decoration:none;background:var(--pink-bg);padding:3px 9px;border-radius:20px;border:1px solid var(--rose-light);margin-top:5px"><i class="ti ti-shopping-bag" style="font-size:11px"></i>Beli di Toko</a>`:""}
+<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-light)"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:11px;color:var(--gray)">Anggaran: <span style="font-weight:700;color:var(--dark)">${fmt(item.price)}</span></span><span style="font-size:11px;color:var(--gray)">Terpakai: <span style="font-weight:600;color:var(--dark)">${fmt(paid)}</span></span></div><div class="progress-bar" style="height:4px"><div class="progress-fill" style="width:${pcti}%;background:${warn.label==="Overbudget"?"var(--danger)":warn.label==="Cukup"?"var(--amber)":"var(--teal)"}"></div></div></div>
+</div></div></div>`;}).join("") )}
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:4px 14px 0">
+    <button class="btn-primary" style="margin:0;background:linear-gradient(135deg,var(--rose-dark),var(--teal-dark))" id="fab-bridesmaid"><i class="ti ti-user-plus" style="font-size:15px"></i>Bridesmaid</button>
+    <button class="btn-primary" style="margin:0;background:linear-gradient(135deg,var(--teal-dark),var(--teal))" id="fab-brismed-ses"><i class="ti ti-package" style="font-size:15px"></i>Perlengkapan</button>
+  </div>`;
+}
+
+function pgTamu(){
+  const isB=S.tamuTab==="bridesmaid";
+  return `<div style="padding:16px 18px 0 18px;margin-bottom:0">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="section-head" style="margin-bottom:0">${isB?"Bridesmaid":L("guestMgmt")}</div>
+    </div>
+    <div style="display:flex;background:var(--gray-light);border-radius:14px;padding:4px;margin-bottom:14px">
+      <button id="btn-tamu-tab" style="flex:1;border:none;border-radius:11px;padding:9px 0;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;background:${!isB?"var(--white)":"transparent"};color:${!isB?"var(--dark)":"var(--gray)"};box-shadow:${!isB?"0 1px 4px rgba(0,0,0,.09)":"none"}">TAMU</button>
+      <button id="btn-bridesmaid-tab" style="flex:1;border:none;border-radius:11px;padding:9px 0;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;background:${isB?"var(--white)":"transparent"};color:${isB?"var(--rose-dark)":"var(--gray)"};box-shadow:${isB?"0 1px 4px rgba(0,0,0,.09)":"none"}">BRIDESMAID</button>
+    </div>
+  </div>
+  <div id="tamu-page-content">
+    ${isB?pgBrismedPage():pgBrismedTamu()}
+  </div>`;
 }
 
 function pgDokumen(){
@@ -528,18 +659,18 @@ function pgDokumen(){
 }
 
 function vendorCard(v){
+  const refId="vnd_"+v.id;const paid=getPaidAmount(refId);const warn=getBudgetWarning(v.cost,paid);const pct=v.cost>0?Math.min(100,Math.round(paid/v.cost*100)):0;
   const imgH=v.photo?`<img src="${v.photo}" style="width:100%;height:100%;object-fit:cover">`:`<i class="ti ${catIcon(v.cat)}" style="font-size:38px;color:var(--gray)"></i>`;
   return `<div class="card"><div class="vendor-img">${imgH}<span class="cat-tag">${v.cat}</span></div>
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div style="flex:1"><div style="font-weight:700;font-size:15px">${v.name}</div><div style="font-size:12.5px;color:var(--gray);margin-top:2px">${v.desc}</div></div>
     <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
-      <button data-ok-vendor="${v.id}" style="width:32px;height:32px;border-radius:50%;background:${v.ok?"var(--teal-light)":"var(--gray-light)"};border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:${v.ok?"var(--teal)":"var(--gray)"}"><i class="ti ${v.ok?"ti-circle-check":"ti-circle"}" style="font-size:17px"></i></button>
       <button class="edit-btn" data-edit-vendor="${v.id}"><i class="ti ti-pencil" style="font-size:13px"></i></button>
     </div></div>
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light)">
       ${v.phone?`<a href="tel:${v.phone}" style="text-decoration:none;display:flex;align-items:center;gap:6px;margin-bottom:4px"><i class="ti ti-phone" style="font-size:14px;color:var(--teal)"></i><span style="font-size:12.5px;color:var(--teal);font-weight:500">${v.phone}</span></a>`:`<div style="font-size:12.5px;color:var(--gray);display:flex;align-items:center;gap:6px;margin-bottom:4px"><i class="ti ti-phone" style="font-size:14px"></i>-</div>`}
       ${v.email?`<a href="mailto:${v.email}" style="text-decoration:none;display:flex;align-items:center;gap:6px;margin-bottom:6px"><i class="ti ti-mail" style="font-size:14px;color:var(--rose-mid)"></i><span style="font-size:12.5px;color:var(--rose-mid);font-weight:500">${v.email}</span></a>`:`<div style="font-size:12.5px;color:var(--gray);display:flex;align-items:center;gap:6px;margin-bottom:6px"><i class="ti ti-mail" style="font-size:14px"></i>-</div>`}
       ${v.link?`<a href="${v.link}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--rose-dark);background:var(--pink-bg);padding:4px 10px;border-radius:20px;border:1px solid var(--rose-light);margin-bottom:8px"><i class="ti ti-shopping-bag" style="font-size:12px"></i>Lihat di Toko</a><br>`:""}
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px"><span style="font-size:10.5px;color:var(--gray);font-weight:600;letter-spacing:.3px;text-transform:uppercase">${L("estimatedCostLabel")}</span><span style="font-size:14px;font-weight:700">${fmt(v.cost)}</span></div>
+      <div style="margin-top:6px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:11px;color:var(--gray)">Anggaran: <span style="font-weight:700;color:var(--dark)">${fmt(v.cost)}</span></span><span class="badge ${warn.cls}" style="font-size:10px"><i class="ti ${warn.ic}" style="font-size:9px"></i> ${warn.label}</span></div><div class="progress-bar" style="height:4px;margin-bottom:4px"><div class="progress-fill" style="width:${pct}%;background:${warn.label==="Overbudget"?"var(--danger)":warn.label==="Cukup"?"var(--amber)":"var(--teal)"}"></div></div><div style="font-size:11px;color:var(--gray)">Terpakai: <span style="font-weight:600;color:var(--dark)">${fmt(paid)}</span></div></div>
     </div></div>`;
 }
 
@@ -557,20 +688,26 @@ function pgVendor(){
 }
 
 /* ── MODAL ── */
-function openModal(type,id){
+function openModal(type,id,brmId){
   const ov=document.getElementById("modal-overlay");
   const mc=document.getElementById("modal-content");
   ov.classList.add("open");
-  const builders={tx:buildTxForm,ses:buildSesForm,guest:buildGuestForm,doc:buildDocForm,vendor:buildVendorForm};
-  mc.innerHTML="<div class=\"modal-handle\"></div>"+(builders[type]?builders[type](id):"");
+  if(type==="brismed-item"){
+    mc.innerHTML="<div class=\"modal-handle\"></div>"+buildBrismedItemForm(brmId||id,brmId?id:null);
+    mc.dataset.brmId=brmId||id;
+    mc.dataset.itemId=brmId?id:"";
+  } else {
+    const builders={tx:buildTxForm,ses:buildSesForm,guest:buildGuestForm,doc:buildDocForm,vendor:buildVendorForm,brismed:buildBrismedForm,"brismed-ses":buildBrismedSeserahanForm};
+    mc.innerHTML="<div class=\"modal-handle\"></div>"+(builders[type]?builders[type](id):"");
+  }
   setTimeout(()=>{
-    ["m-tx-amt","m-ses-price","m-v-cost"].forEach(id=>bindMoney(id));
-    bindModalEvents(type,id);
+    ["m-tx-amt","m-ses-price","m-v-cost","m-brmi-price","m-brms-price"].forEach(eid=>bindMoney(eid));
+    bindModalEvents(type,id,brmId);
   },30);
 }
 function closeModal(){document.getElementById("modal-overlay").classList.remove("open");}
 
-function bindModalEvents(type,id){
+function bindModalEvents(type,id,brmId){
   const mc=document.getElementById("modal-content");
   const cl=mc.querySelector("#modal-close");if(cl)cl.onclick=closeModal;
   mc.querySelectorAll("[data-cat-ctx]").forEach(btn=>{
@@ -582,12 +719,25 @@ function bindModalEvents(type,id){
       });
     };
   });
-  const delBtn=mc.querySelector("[data-del]");if(delBtn)delBtn.onclick=()=>delItem(delBtn.dataset.del,id);
-  const savBtn=mc.querySelector("[data-save]");if(savBtn)savBtn.onclick=()=>{
-    const saves={tx:saveTx,ses:saveSes,guest:saveGuest,doc:saveDoc,vendor:saveVendor};
-    if(saves[savBtn.dataset.save])saves[savBtn.dataset.save](id);
+  const _brmId=brmId||mc.dataset.brmId;
+  const _itemId=id||(mc.dataset.itemId||"");
+  const delBtn=mc.querySelector("[data-del]");
+  if(delBtn)delBtn.onclick=()=>{
+    if(type==="brismed-item")delBrismedItem(_brmId,_itemId);
+    else delItem(delBtn.dataset.del,id);
   };
-  mc.querySelectorAll("[data-tx-type]").forEach(p=>{p.onclick=()=>{txType=p.dataset.txType;mc.querySelectorAll("[data-tx-type]").forEach(x=>x.classList.toggle("active",x===p));};});
+  const savBtn=mc.querySelector("[data-save]");if(savBtn)savBtn.onclick=()=>{
+    const t=savBtn.dataset.save||type;
+    if(t==="tx")saveTx(id);
+    else if(t==="ses")saveSes(id);
+    else if(t==="guest")saveGuest(id);
+    else if(t==="doc")saveDoc(id);
+    else if(t==="vendor")saveVendor(id);
+    else if(t==="brismed")saveBrismed(id);
+    else if(t==="brismed-item")saveBrismedItem(_brmId,_itemId||null);
+    else if(t==="brismed-ses")saveBrismedSeserahan();
+  };
+  mc.querySelectorAll("[data-tx-type]").forEach(p=>{p.onclick=()=>{switchTxType(p.dataset.txType);};});
   mc.querySelectorAll("[data-tx-st]").forEach(p=>{p.onclick=()=>{txStatus=p.dataset.txSt;mc.querySelectorAll("[data-tx-st]").forEach(x=>x.classList.toggle("active",x===p));};});
   mc.querySelectorAll("[data-ses-party]").forEach(p=>{p.onclick=()=>{sesParty=p.dataset.sesParty;mc.querySelectorAll("[data-ses-party]").forEach(x=>x.classList.toggle("active",x===p));};});
   mc.querySelectorAll("[data-ses-st]").forEach(p=>{p.onclick=()=>{sesStatus=p.dataset.sesSt;mc.querySelectorAll("[data-ses-st]").forEach(x=>x.classList.toggle("active",x===p));};});
@@ -600,6 +750,17 @@ function bindModalEvents(type,id){
   mc.querySelectorAll("[data-doc-st]").forEach(p=>{p.onclick=()=>{docSt=p.dataset.docSt;mc.querySelectorAll("[data-doc-st]").forEach(x=>x.classList.toggle("active",x===p));};});
   mc.querySelectorAll("[data-v-ok]").forEach(p=>{p.onclick=()=>{vOk=p.dataset.vOk==="true";mc.querySelectorAll("[data-v-ok]").forEach(x=>x.classList.toggle("active",x===p));};});
   mc.querySelectorAll("[data-theme]").forEach(p=>{p.onclick=()=>{selTheme=p.dataset.theme;mc.querySelectorAll("[data-theme]").forEach(x=>x.classList.toggle("active",x===p));};});
+  /* Brismed person pills */
+  mc.querySelectorAll("[data-brmg-group]").forEach(p=>{p.onclick=()=>{brmGGroup=p.dataset.brmgGroup;mc.querySelectorAll("[data-brmg-group]").forEach(x=>x.classList.toggle("active",x===p));};});
+  mc.querySelectorAll("[data-brmg-rsvp]").forEach(p=>{p.onclick=()=>{brmGRsvp=p.dataset.brmgRsvp;mc.querySelectorAll("[data-brmg-rsvp]").forEach(x=>x.classList.toggle("active",x===p));};});
+  mc.querySelectorAll("[data-brmg-vip]").forEach(p=>{p.onclick=()=>{brmGVip=p.dataset.brmgVip==="true";mc.querySelectorAll("[data-brmg-vip]").forEach(x=>x.classList.toggle("active",x===p));};});
+  const brmMinus=mc.querySelector("#brm-cnt-minus");const brmPlus=mc.querySelector("#brm-cnt-plus");const brmDisp=mc.querySelector("#brm-cnt-disp");
+  if(brmMinus)brmMinus.onclick=()=>{if(brmGCount>1){brmGCount--;if(brmDisp)brmDisp.textContent=brmGCount;}};
+  if(brmPlus)brmPlus.onclick=()=>{brmGCount++;if(brmDisp)brmDisp.textContent=brmGCount;};
+  /* Brismed item status pills */
+  mc.querySelectorAll("[data-brmi-st]").forEach(p=>{p.onclick=()=>{brmItemStatus=p.dataset.brmiSt;mc.querySelectorAll("[data-brmi-st]").forEach(x=>x.classList.toggle("active",x===p));};});
+  /* Brismed seserahan status pills */
+  mc.querySelectorAll("[data-brms-st]").forEach(p=>{p.onclick=()=>{brmSesStatus=p.dataset.brmsSt;mc.querySelectorAll("[data-brms-st]").forEach(x=>x.classList.toggle("active",x===p));};});
   const vpBtn=mc.querySelector("#vendor-photo-btn");
   if(vpBtn)vpBtn.onclick=()=>pickPhoto(d=>{
     vendorPhoto=d;
@@ -609,10 +770,20 @@ function bindModalEvents(type,id){
   });
 }
 
+function delBrismedItem(brmId,itemId){
+  if(!confirm("Hapus perlengkapan ini?"))return;
+  const brm=S.brismed.find(x=>String(x.id)===String(brmId));
+  if(brm&&brm.items)brm.items=brm.items.filter(i=>String(i.id)!==String(itemId));
+  syncBrismedBudget();
+  closeModal();renderPage("tamu");showToast(L("itemDeleted"));
+  syncBrismed(brmId);
+}
+
 function delItem(type,id){
   if(!confirm(L("itemDeleted")+"?"))return;
-  const map={tx:"transactions",ses:"seserahan",guest:"guests",doc:"documents",vendor:"vendors"};
+  const map={tx:"transactions",ses:"seserahan",guest:"guests",doc:"documents",vendor:"vendors",brismed:"brismed"};
   if(map[type])S[map[type]]=S[map[type]].filter(x=>String(x.id)!==String(id));
+  if(type==="brismed"){syncBrismedBudget();}
   closeModal();renderPage(curTab);showToast(L("itemDeleted"));
 }
 
@@ -673,24 +844,71 @@ function pillRow(items,attr,cur){return items.map(([v,lbl])=>`<span class="pill$
 function buildTxForm(id){
   const ex=id?S.transactions.find(x=>String(x.id)===String(id)):null;
   if(ex){txType=ex.type;txStatus=ex.status||"Belum Dibayar";}else{txType="out";txStatus="Belum Dibayar";}
+  if(!id)txPaySel=null;
   const isEdit=!!ex;
   const payStatuses=[["Belum Dibayar",L("notUnpaid")],["DP",L("dp")],["Lunas",L("paid")],["Tabungan","Tabungan"]];
+  // "Bayar" form content
+  const budItems=getBudgetItems();
+  const selItem=txPaySel?budItems.find(b=>b.id===txPaySel):null;
+  const payForm=`
+<span class="field-label">NOMINAL</span>
+<div class="money-wrap"><span class="money-pfx">Rp</span><input id="m-tx-amt" class="money-input" inputmode="numeric" placeholder="0" value="${ex&&ex.type==="pay"?fmtN(ex.amount):""}"></div>
+<span class="field-label">NAMA / ITEM</span>
+<div style="position:relative;margin-top:4px">
+  <div id="pay-sel-display" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1.5px solid var(--border);border-radius:12px;cursor:pointer;background:var(--white)" onclick="togglePayDropdown()">
+    <div style="flex:1;min-width:0">
+      ${selItem?`<div style="font-weight:600;font-size:13.5px;color:var(--dark)">${selItem.label}</div><div style="font-size:11px;color:var(--gray);margin-top:1px">${selItem.type} &middot; ${fmt(selItem.price)}</div>`:`<span style="color:var(--gray);font-size:13.5px">Pilih item yang dibayar...</span>`}
+    </div>
+    <i class="ti ti-chevron-down" style="font-size:14px;color:var(--gray);flex-shrink:0;margin-left:8px"></i>
+  </div>
+  <div id="pay-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--white);border:1.5px solid var(--border);border-radius:12px;z-index:99;max-height:220px;overflow:hidden;margin-top:4px;box-shadow:0 4px 20px rgba(0,0,0,.12)">
+    <div style="padding:8px 10px;border-bottom:1px solid var(--border-light)"><div style="display:flex;align-items:center;gap:7px;background:var(--gray-light);border-radius:8px;padding:6px 10px"><i class="ti ti-search" style="font-size:14px;color:var(--gray);flex-shrink:0"></i><input id="pay-search-inp" style="border:none;outline:none;background:transparent;font-family:'DM Sans',sans-serif;font-size:13px;width:100%;color:var(--dark)" placeholder="Cari item..." oninput="filterPayItems(this.value)"></div></div>
+    <div id="pay-item-list" style="overflow-y:auto;max-height:160px">${budItems.map(b=>`<div class="pay-item-row" data-pay-id="${b.id}" onclick="selectPayItem('${b.id}')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between${txPaySel===b.id?";background:var(--pink-bg)":""}"><div><div style="font-weight:600;font-size:13px">${b.label}</div><div style="font-size:11px;color:var(--gray);margin-top:1px">${b.type} &middot; ${fmt(b.price)}</div></div>${txPaySel===b.id?'<i class="ti ti-circle-check" style="font-size:16px;color:var(--teal)"></i>':''}</div>`).join("")}</div>
+  </div>
+  <input type="hidden" id="pay-ref-id" value="${txPaySel||""}">
+</div>
+<span class="field-label">CATATAN</span>
+<input id="m-tx-notes" class="input-field" placeholder="${L("notesPh")}" value="${ex&&ex.type==="pay"&&ex.notes?ex.notes:""}">
+${isEdit?`<button class="btn-danger" data-del="tx"><i class="ti ti-trash" style="font-size:15px"></i>${L("deleteBudget")}</button>`:""}
+<button class="btn-primary" data-save="tx" style="background:linear-gradient(135deg,#2A5C52,#3D7A6E)"><i class="ti ti-cash" style="font-size:15px"></i>Bayar</button>`;
+
   return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div class="modal-title">${isEdit?L("editBudget"):L("addBudget")}</div><button class="hicon" id="modal-close"><i class="ti ti-x"></i></button></div>
 <span class="field-label">${L("transactionType")}</span>
-<div style="display:flex;gap:8px;margin-bottom:4px">${pillRow([["out","<i class=\"ti ti-arrow-up\" style=\"font-size:12px\"></i> "+L("expenseOut")],["in","<i class=\"ti ti-arrow-down\" style=\"font-size:12px\"></i> "+L("incomeIn")]],"data-tx-type",txType)}</div>
+<div style="display:flex;gap:8px;margin-bottom:4px">
+  <span class="pill${txType==="out"?" active":""}" data-tx-type="out" style="flex:1;text-align:center"><i class="ti ti-arrow-up" style="font-size:12px"></i> ${L("expenseOut")}</span>
+  <span class="pill${txType==="in"?" active":""}" data-tx-type="in" style="flex:1;text-align:center"><i class="ti ti-arrow-down" style="font-size:12px"></i> ${L("incomeIn")}</span>
+  <span class="pill${txType==="pay"?" active":""}" data-tx-type="pay" style="flex:1;text-align:center"><i class="ti ti-cash" style="font-size:12px"></i> Bayar</span>
+</div>
+<div id="tx-form-body">
+${txType==="pay"?payForm:`
 <span class="field-label">${L("nominal")}</span>
-<div class="money-wrap"><span class="money-pfx">Rp</span><input id="m-tx-amt" class="money-input" inputmode="numeric" placeholder="0" value="${ex?fmtN(ex.amount):""}"></div>
+<div class="money-wrap"><span class="money-pfx">Rp</span><input id="m-tx-amt" class="money-input" inputmode="numeric" placeholder="0" value="${ex&&ex.type!=="pay"?fmtN(ex.amount):""}"></div>
 <span class="field-label">${L("itemName")}</span>
-<input id="m-tx-name" class="input-field" placeholder="Contoh: DP Gedung" value="${ex?ex.name:""}">
-<span class="field-label">${L("category")}</span>${catTriggerHTML("tx",ex?ex.cat:"")}
+<input id="m-tx-name" class="input-field" placeholder="Contoh: DP Gedung" value="${ex&&ex.type!=="pay"?ex.name:""}">
+<span class="field-label">${L("category")}</span>${catTriggerHTML("tx",ex&&ex.type!=="pay"?ex.cat:"")}
 <span class="field-label">${L("paymentStatus")}</span>
 <div style="display:flex;gap:8px;flex-wrap:wrap">${pillRow(payStatuses,"data-tx-st",txStatus)}</div>
 <span class="field-label">${L("notes")}</span>
-<input id="m-tx-notes" class="input-field" placeholder="${L("notesPh")}" value="${ex&&ex.notes?ex.notes:""}">
+<input id="m-tx-notes" class="input-field" placeholder="${L("notesPh")}" value="${ex&&ex.type!=="pay"&&ex.notes?ex.notes:""}">
 ${isEdit?`<button class="btn-danger" data-del="tx"><i class="ti ti-trash" style="font-size:15px"></i>${L("deleteBudget")}</button>`:""}
-<button class="btn-primary" data-save="tx"><i class="ti ti-device-floppy" style="font-size:15px"></i>${isEdit?L("updateBudget"):L("saveBudget")}</button>`;
+<button class="btn-primary" data-save="tx"><i class="ti ti-device-floppy" style="font-size:15px"></i>${isEdit?L("updateBudget"):L("saveBudget")}</button>`}
+</div>`;
 }
 function saveTx(id){
+  if(txType==="pay"){
+    const amt=moneyVal("m-tx-amt");
+    const refId=(document.getElementById("pay-ref-id")||{}).value||"";
+    const notes=(document.getElementById("m-tx-notes")||{}).value||"";
+    if(!amt){showToast(L("fillRequired"));return;}
+    if(!refId){showToast("Pilih item yang dibayar");return;}
+    const budItems=getBudgetItems();
+    const selItem=budItems.find(b=>b.id===refId);
+    const itemName=selItem?selItem.label:"Pembayaran";
+    const cat=selItem&&selItem.type==="Vendor"?"Vendor":selItem&&selItem.type==="Seserahan"?"Seserahan":"Bridesmaid";
+    if(id){const tx=S.transactions.find(x=>String(x.id)===String(id));if(tx)Object.assign(tx,{name:"Bayar: "+itemName,cat,type:"pay",amount:amt,status:"Lunas",notes,payRefId:refId,date:tx.date});showToast("Pembayaran diperbarui");}
+    else{S.transactions.unshift({id:Date.now(),name:"Bayar: "+itemName,cat,type:"pay",amount:amt,status:"Lunas",notes,payRefId:refId,date:new Date().toISOString().split("T")[0]});showToast("Pembayaran dicatat");}
+    txPaySel=null;closeModal();renderPage("anggaran");return;
+  }
   const name=(document.getElementById("m-tx-name").value||"").trim();
   const amt=moneyVal("m-tx-amt");
   if(!name||!amt){showToast(L("fillRequired"));return;}
@@ -701,6 +919,64 @@ function saveTx(id){
   closeModal();renderPage("anggaran");
 }
 
+function togglePayDropdown(){const d=document.getElementById("pay-dropdown");if(d){d.style.display=d.style.display==="none"?"block":"none";const inp=document.getElementById("pay-search-inp");if(inp&&d.style.display==="block")inp.focus();}}
+function filterPayItems(q){const rows=document.querySelectorAll(".pay-item-row");rows.forEach(r=>{const txt=r.textContent.toLowerCase();r.style.display=txt.includes(q.toLowerCase())?"flex":"none";});}
+function selectPayItem(id){
+  txPaySel=id;
+  document.getElementById("pay-ref-id").value=id;
+  const budItems=getBudgetItems();
+  const item=budItems.find(b=>b.id===id);
+  const disp=document.getElementById("pay-sel-display");
+  if(disp&&item)disp.innerHTML=`<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13.5px;color:var(--dark)">${item.label}</div><div style="font-size:11px;color:var(--gray);margin-top:1px">${item.type} &middot; ${fmt(item.price)}</div></div><i class="ti ti-chevron-down" style="font-size:14px;color:var(--gray);flex-shrink:0;margin-left:8px"></i>`;
+  document.querySelectorAll(".pay-item-row").forEach(r=>{r.style.background=r.dataset.payId===id?"var(--pink-bg)":"";});
+  const d=document.getElementById("pay-dropdown");if(d)d.style.display="none";
+}
+function switchTxType(type){
+  txType=type;
+  const mc=document.getElementById("modal-content");if(!mc)return;
+  mc.querySelectorAll("[data-tx-type]").forEach(p=>p.classList.toggle("active",p.dataset.txType===type));
+  const body=document.getElementById("tx-form-body");if(!body)return;
+  const payStatuses=[["Belum Dibayar",L("notUnpaid")],["DP",L("dp")],["Lunas",L("paid")],["Tabungan","Tabungan"]];
+  const budItems=getBudgetItems();
+  const selItem=txPaySel?budItems.find(b=>b.id===txPaySel):null;
+  if(type==="pay"){
+    body.innerHTML=`
+<span class="field-label">NOMINAL</span>
+<div class="money-wrap"><span class="money-pfx">Rp</span><input id="m-tx-amt" class="money-input" inputmode="numeric" placeholder="0"></div>
+<span class="field-label">NAMA / ITEM</span>
+<div style="position:relative;margin-top:4px">
+  <div id="pay-sel-display" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1.5px solid var(--border);border-radius:12px;cursor:pointer;background:var(--white)" onclick="togglePayDropdown()">
+    <div style="flex:1;min-width:0">${selItem?`<div style="font-weight:600;font-size:13.5px;color:var(--dark)">${selItem.label}</div><div style="font-size:11px;color:var(--gray);margin-top:1px">${selItem.type} &middot; ${fmt(selItem.price)}</div>`:`<span style="color:var(--gray);font-size:13.5px">Pilih item yang dibayar...</span>`}</div>
+    <i class="ti ti-chevron-down" style="font-size:14px;color:var(--gray);flex-shrink:0;margin-left:8px"></i>
+  </div>
+  <div id="pay-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--white);border:1.5px solid var(--border);border-radius:12px;z-index:99;max-height:220px;overflow:hidden;margin-top:4px;box-shadow:0 4px 20px rgba(0,0,0,.12)">
+    <div style="padding:8px 10px;border-bottom:1px solid var(--border-light)"><div style="display:flex;align-items:center;gap:7px;background:var(--gray-light);border-radius:8px;padding:6px 10px"><i class="ti ti-search" style="font-size:14px;color:var(--gray);flex-shrink:0"></i><input id="pay-search-inp" style="border:none;outline:none;background:transparent;font-family:'DM Sans',sans-serif;font-size:13px;width:100%;color:var(--dark)" placeholder="Cari item..." oninput="filterPayItems(this.value)"></div></div>
+    <div id="pay-item-list" style="overflow-y:auto;max-height:160px">${budItems.map(b=>`<div class="pay-item-row" data-pay-id="${b.id}" onclick="selectPayItem('${b.id}')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between${txPaySel===b.id?";background:var(--pink-bg)":""}"><div><div style="font-weight:600;font-size:13px">${b.label}</div><div style="font-size:11px;color:var(--gray);margin-top:1px">${b.type} &middot; ${fmt(b.price)}</div></div>${txPaySel===b.id?'<i class="ti ti-circle-check" style="font-size:16px;color:var(--teal)"></i>':''}</div>`).join("")}</div>
+  </div>
+  <input type="hidden" id="pay-ref-id" value="${txPaySel||""}">
+</div>
+<span class="field-label">CATATAN</span>
+<input id="m-tx-notes" class="input-field" placeholder="${L("notesPh")}">
+<button class="btn-primary" data-save="tx" style="background:linear-gradient(135deg,#2A5C52,#3D7A6E)"><i class="ti ti-cash" style="font-size:15px"></i>Bayar</button>`;
+    bindMoney("m-tx-amt");
+  } else {
+    body.innerHTML=`
+<span class="field-label">${L("nominal")}</span>
+<div class="money-wrap"><span class="money-pfx">Rp</span><input id="m-tx-amt" class="money-input" inputmode="numeric" placeholder="0"></div>
+<span class="field-label">${L("itemName")}</span>
+<input id="m-tx-name" class="input-field" placeholder="Contoh: DP Gedung">
+<span class="field-label">${L("category")}</span>${catTriggerHTML("tx","")}
+<span class="field-label">${L("paymentStatus")}</span>
+<div style="display:flex;gap:8px;flex-wrap:wrap">${pillRow(payStatuses,"data-tx-st","Belum Dibayar")}</div>
+<span class="field-label">${L("notes")}</span>
+<input id="m-tx-notes" class="input-field" placeholder="${L("notesPh")}">
+<button class="btn-primary" data-save="tx"><i class="ti ti-device-floppy" style="font-size:15px"></i>${L("saveBudget")}</button>`;
+    bindMoney("m-tx-amt");
+    mc.querySelectorAll("[data-cat-ctx]").forEach(btn=>{btn.onclick=()=>{const ctx=btn.dataset.catCtx;const hid=document.getElementById("cat-hid-"+ctx);openCatPicker(hid?hid.value:"",v=>{if(hid)hid.value=v;updateCatTrigger(ctx,v);});};});
+    mc.querySelectorAll("[data-tx-st]").forEach(p=>{p.onclick=()=>{txStatus=p.dataset.txSt;mc.querySelectorAll("[data-tx-st]").forEach(x=>x.classList.toggle("active",x===p));};});
+    const savBtn=mc.querySelector("[data-save]");if(savBtn)savBtn.onclick=()=>saveTx(null);
+  }
+}
 function buildSesForm(id){
   const ex=id?S.seserahan.find(x=>String(x.id)===String(id)):null;
   if(ex){sesParty=ex.party;sesStatus=ex.status;}else{sesParty="Pria";sesStatus="Belum Dibeli";}
@@ -736,7 +1012,7 @@ function buildGuestForm(id){
   const ex=id?S.guests.find(x=>String(x.id)===String(id)):null;
   if(ex){gGroup=ex.group;gRsvp=ex.rsvp;gCount=ex.count;gVip=ex.vip;}else{gGroup="Keluarga";gRsvp="Menunggu";gCount=1;gVip=false;}
   const isEdit=!!ex;
-  const grps=[["Keluarga",L("family")],["Teman",L("friend")],["Rekan Kerja",L("colleague")],["Lainnya",L("other")]];
+  const grps=[["Keluarga","Keluarga"],["Teman Wanita","Teman Wanita"],["Teman Pria","Teman Pria"],["Lainnya","Lainnya"]];
   return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div class="modal-title">${isEdit?L("editGuestTitle"):L("addGuestTitle")}</div><button class="hicon" id="modal-close"><i class="ti ti-x"></i></button></div>
 <span class="field-label">${L("fullName")}</span>
 <input id="m-g-name" class="input-field" placeholder="${L("fullNamePh")}" value="${ex?ex.name:""}">
@@ -768,6 +1044,135 @@ function saveGuest(id){
   const contact=(document.getElementById("m-g-contact").value||"");
   if(id){const g=S.guests.find(x=>String(x.id)===String(id));if(g)Object.assign(g,{name,group:gGroup,contact,count:gCount,vip:gVip,rsvp:gRsvp});showToast(L("guestUpdated"));}
   else{S.guests.push({id:Date.now(),name,group:gGroup,contact,count:gCount,vip:gVip,rsvp:gRsvp});showToast(L("guestAdded"));}
+  closeModal();renderPage("tamu");
+}
+
+/* ── BRISMED FORMS ── */
+function buildBrismedForm(id){
+  const ex=id?S.brismed.find(x=>String(x.id)===String(id)):null;
+  if(ex){brmGGroup=ex.group;brmGRsvp=ex.rsvp;brmGCount=ex.count;brmGVip=ex.vip;}else{brmGGroup="Keluarga";brmGRsvp="Menunggu";brmGCount=1;brmGVip=false;}
+  const isEdit=!!ex;
+  const grps=[["Keluarga","Keluarga"],["Teman Wanita","Teman Wanita"],["Teman Pria","Teman Pria"],["Lainnya","Lainnya"]];
+  return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div class="modal-title">${isEdit?"Edit Bridesmaid":"Tambah Bridesmaid"}</div><button class="hicon" id="modal-close"><i class="ti ti-x"></i></button></div>
+<span class="field-label">Nama Bridesmaid</span>
+<input id="m-brm-name" class="input-field" placeholder="Masukkan nama bridesmaid" value="${ex?ex.name:""}">
+<span class="field-label">Grup / Hubungan</span>
+<div style="display:flex;gap:7px;flex-wrap:wrap">${pillRow(grps,"data-brmg-group",brmGGroup)}</div>
+<span class="field-label">Kontak (Email / No. HP)</span>
+<div style="display:flex;gap:9px;align-items:center"><i class="ti ti-mail" style="font-size:17px;color:var(--gray)"></i><input id="m-brm-contact" class="input-field" placeholder="Email atau nomor telepon" value="${ex?ex.contact:""}"></div>
+<span class="field-label">Jumlah Orang</span>
+<div style="display:flex;align-items:center;gap:18px;margin:6px 0 4px">
+  <button id="brm-cnt-minus" style="width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray)"><i class="ti ti-minus" style="font-size:14px"></i></button>
+  <span id="brm-cnt-disp" style="font-size:20px;font-weight:700;min-width:24px;text-align:center">${ex?ex.count:1}</span>
+  <button id="brm-cnt-plus" style="width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray)"><i class="ti ti-plus" style="font-size:14px"></i></button>
+</div>
+<span class="field-label">VIP</span>
+<div style="display:flex;gap:8px;margin-bottom:4px">${pillRow([["true","Ya, VIP"],["false","Tidak"]],"data-brmg-vip",String(brmGVip))}</div>
+<span class="field-label">Status RSVP</span>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:6px">
+  <div class="rsvp-seg${brmGRsvp==="Menunggu"?" active":""}" data-brmg-rsvp="Menunggu">Menunggu<br><i class="ti ti-clock" style="font-size:18px;margin-top:4px"></i></div>
+  <div class="rsvp-seg${brmGRsvp==="Hadir"?" active":""}" data-brmg-rsvp="Hadir">Hadir<br><i class="ti ti-circle-check" style="font-size:18px;margin-top:4px"></i></div>
+  <div class="rsvp-seg${brmGRsvp==="Tidak Hadir"?" active":""}" data-brmg-rsvp="Tidak Hadir" style="grid-column:1/-1">Tidak Hadir<br><i class="ti ti-circle-x" style="font-size:18px;margin-top:4px"></i></div>
+</div>
+${isEdit?`<button class="btn-danger" data-del="brismed"><i class="ti ti-trash" style="font-size:15px"></i>Hapus Bridesmaid</button>`:""}
+<button class="btn-primary" data-save="brismed"><i class="ti ti-device-floppy" style="font-size:15px"></i>${isEdit?"Simpan Perubahan":"Tambah Bridesmaid"}</button>`;
+}
+function saveBrismed(id){
+  const name=(document.getElementById("m-brm-name").value||"").trim();
+  if(!name){showToast(L("fillName"));return;}
+  brmGCount=parseInt((document.getElementById("brm-cnt-disp")||{}).textContent)||1;
+  const contact=(document.getElementById("m-brm-contact").value||"");
+  if(id){const b=S.brismed.find(x=>String(x.id)===String(id));if(b)Object.assign(b,{name,group:brmGGroup,contact,count:brmGCount,vip:brmGVip,rsvp:brmGRsvp});showToast("Bridesmaid diperbarui");}
+  else{S.brismed.push({id:Date.now(),name,group:brmGGroup,contact,count:brmGCount,vip:brmGVip,rsvp:brmGRsvp,items:[]});showToast("Bridesmaid ditambahkan");}
+  closeModal();renderPage("tamu");
+}
+
+function buildBrismedItemForm(brmId,itemId){
+  const brm=S.brismed.find(x=>String(x.id)===String(brmId));
+  const ex=itemId&&brm?(brm.items||[]).find(i=>String(i.id)===String(itemId)):null;
+  if(ex)brmItemStatus=ex.status;else brmItemStatus="Belum Dibeli";
+  const isEdit=!!ex;
+  const sts=[["Belum Dibeli","Belum Dibeli"],["Sedang Dikemas","Sedang Dikemas"],["Sudah Dibeli","Sudah Dibeli"],["Sudah Dihias","Sudah Dihias"],["Siap","Siap"]];
+  return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div class="modal-title">${isEdit?"Edit Perlengkapan":"Tambah Perlengkapan"}</div><button class="hicon" id="modal-close"><i class="ti ti-x"></i></button></div>
+<div style="font-size:12px;color:var(--teal);background:var(--teal-light);padding:8px 12px;border-radius:10px;margin-bottom:8px;display:flex;align-items:center;gap:6px"><i class="ti ti-users-group" style="font-size:14px"></i>Untuk: <strong>${brm?brm.name:"Bridesmaid"}</strong></div>
+<span class="field-label">Nama Barang</span>
+<input id="m-brmi-name" class="input-field" placeholder="e.g., Mukena, Perhiasan" value="${ex?ex.name:""}">
+<span class="field-label">Kategori</span>${catTriggerHTML("brmi",ex?ex.cat:"")}
+<span class="field-label">Harga / Estimasi</span>
+<div class="money-wrap"><span class="money-pfx">Rp</span><input id="m-brmi-price" class="money-input" inputmode="numeric" placeholder="0" value="${ex?fmtN(ex.price):""}"></div>
+<span class="field-label">Link Toko / Shopee</span>
+<div style="display:flex;gap:9px;align-items:center"><i class="ti ti-shopping-bag" style="font-size:17px;color:var(--gray)"></i><input id="m-brmi-link" class="input-field" placeholder="https://shopee.co.id/..." value="${ex&&ex.link?ex.link:""}"></div>
+<span class="field-label">Status</span>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">${sts.map(([v,lbl])=>`<div class="rsvp-seg${brmItemStatus===v?" active":""}" data-brmi-st="${v}">${lbl}</div>`).join("")}</div>
+${isEdit?`<button class="btn-danger" data-del="brismed-item" data-brm-id="${brmId}"><i class="ti ti-trash" style="font-size:15px"></i>Hapus Perlengkapan</button>`:""}
+<button class="btn-primary" data-save="brismed-item" data-brm-id="${brmId}"><i class="ti ti-device-floppy" style="font-size:15px"></i>${isEdit?"Simpan Perubahan":"Tambah Perlengkapan"}</button>`;
+}
+function saveBrismedItem(brmId,itemId){
+  const brm=S.brismed.find(x=>String(x.id)===String(brmId));
+  if(!brm)return;
+  const name=(document.getElementById("m-brmi-name").value||"").trim();
+  if(!name){showToast(L("fillName"));return;}
+  const cat=(document.getElementById("cat-hid-brmi")||{}).value||"Lain-Lain";
+  const price=moneyVal("m-brmi-price");
+  const link=(document.getElementById("m-brmi-link").value||"").trim();
+  if(!brm.items)brm.items=[];
+  if(itemId){const item=brm.items.find(i=>String(i.id)===String(itemId));if(item)Object.assign(item,{name,cat,price,status:brmItemStatus,link});}
+  else{brm.items.push({id:Date.now(),name,cat,price,status:brmItemStatus,link});}
+  /* Sync budget: add/update "Bridesmaid" transactions for each item that is "Siap/Sudah Dibeli/Sudah Dihias" */
+  syncBrismedBudget();
+  showToast("Perlengkapan disimpan");
+  closeModal();renderPage("tamu");
+  syncBrismed(brmId);
+}
+function syncBrismedBudget(){
+  /* Remove all existing brismed transactions then re-add for done items */
+  S.transactions=S.transactions.filter(tx=>!tx._brismedSync);
+  S.brismed.forEach(b=>{
+    (b.items||[]).filter(i=>["Siap","Sudah Dibeli","Sudah Dihias"].includes(i.status)&&i.price>0).forEach(i=>{
+      S.transactions.push({id:"brm_"+b.id+"_"+i.id,name:"Brismed: "+b.name+" - "+i.name,cat:i.cat||"Lain-Lain",type:"out",amount:i.price,status:"Lunas",date:new Date().toISOString().split("T")[0],notes:"",_brismedSync:true});
+    });
+  });
+}
+
+/* ── BRISMED SESERAHAN FORM (Add Perlengkapan with bridesmaid picker) ── */
+let brmSesStatus="Belum Dibeli";
+function buildBrismedSeserahanForm(id){
+  /* id = existing item global id for edit, null for new */
+  const isEdit=!!id;
+  if(!isEdit){brmSesStatus="Belum Dibeli";}
+  const sts=[["Belum Dibeli","Belum Dibeli"],["Sedang Dikemas","Sedang Dikemas"],["Sudah Dibeli","Sudah Dibeli"],["Sudah Dihias","Sudah Dihias"],["Siap","Siap"]];
+  const brmOpts=S.brismed.map(b=>`<option value="${b.id}">${b.name}</option>`).join("");
+  if(S.brismed.length===0){
+    return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div class="modal-title">Tambah Perlengkapan</div><button class="hicon" id="modal-close"><i class="ti ti-x"></i></button></div>
+<div style="text-align:center;padding:32px 0;color:var(--gray)"><i class="ti ti-users-group" style="font-size:40px;display:block;margin-bottom:10px"></i>Tambahkan bridesmaid dulu sebelum menambah perlengkapan.</div>`;
+  }
+  return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div class="modal-title">Tambah Perlengkapan</div><button class="hicon" id="modal-close"><i class="ti ti-x"></i></button></div>
+<span class="field-label">UNTUK BRIDESMAID</span>
+<select id="m-brms-brmid" style="width:100%;border:1.5px solid var(--border);border-radius:12px;padding:10px 13px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--dark);background:var(--white);outline:none;margin-top:4px">${brmOpts}</select>
+<span class="field-label">NAMA BARANG</span>
+<input id="m-brms-name" class="input-field" placeholder="e.g., Mukena, Tas, Perhiasan" value="">
+<span class="field-label">KATEGORI</span>${catTriggerHTML("brms","")}
+<span class="field-label">HARGA / ESTIMASI</span>
+<div class="money-wrap"><span class="money-pfx">Rp</span><input id="m-brms-price" class="money-input" inputmode="numeric" placeholder="0"></div>
+<span class="field-label">LINK TOKO / SHOPEE</span>
+<div style="display:flex;gap:9px;align-items:center"><i class="ti ti-shopping-bag" style="font-size:17px;color:var(--gray)"></i><input id="m-brms-link" class="input-field" placeholder="https://shopee.co.id/..."></div>
+<span class="field-label">STATUS</span>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">${sts.map(([v,lbl])=>`<div class="rsvp-seg${brmSesStatus===v?" active":""}" data-brms-st="${v}">${lbl}</div>`).join("")}</div>
+<button class="btn-primary" data-save="brismed-ses"><i class="ti ti-device-floppy" style="font-size:15px"></i>Tambah Perlengkapan</button>`;
+}
+function saveBrismedSeserahan(){
+  const brmId=(document.getElementById("m-brms-brmid")||{}).value||"";
+  const brm=S.brismed.find(x=>String(x.id)===String(brmId));
+  if(!brm){showToast("Pilih bridesmaid terlebih dahulu");return;}
+  const name=(document.getElementById("m-brms-name").value||"").trim();
+  if(!name){showToast(L("fillName"));return;}
+  const cat=(document.getElementById("cat-hid-brms")||{}).value||"Lain-Lain";
+  const price=moneyVal("m-brms-price");
+  const link=(document.getElementById("m-brms-link").value||"").trim();
+  if(!brm.items)brm.items=[];
+  brm.items.push({id:Date.now(),name,cat,price,status:brmSesStatus,link});
+  syncBrismedBudget();
+  showToast("Perlengkapan ditambahkan untuk "+brm.name);
   closeModal();renderPage("tamu");
 }
 
@@ -1145,7 +1550,7 @@ async function loadFromRTDB(){
     const d=snap.val();
     /* Meta/settings & notif TIDAK diload dari RTDB — hanya dari Firestore */
     /* collections */
-    const cols=["transactions","seserahan","guests","documents","vendors"];
+    const cols=["transactions","seserahan","guests","documents","vendors","brismed"];
     cols.forEach(col=>{
       if(d[col]){
         const items=Object.values(d[col]).map(it=>{const c={...it};delete c._t;return c;});
@@ -1191,7 +1596,7 @@ function startRTDBListener(){
     const d=snap.val();
     let changed=false;
     /* Update collections if remote is newer */
-    const cols=["transactions","seserahan","guests","documents","vendors"];
+    const cols=["transactions","seserahan","guests","documents","vendors","brismed"];
     cols.forEach(col=>{
       if(d[col]){
         const items=Object.values(d[col]).map(it=>{const c={...it};delete c._t;return c;});
@@ -1201,7 +1606,7 @@ function startRTDBListener(){
         if(localStr!==remoteStr){S[col]=items;changed=true;}
       }
     });
-    if(changed){renderPage(curTab);showSyncBadge();}
+    if(changed){syncBrismedBudget();renderPage(curTab);showSyncBadge();}
   });
 }
 
@@ -1228,7 +1633,10 @@ async function syncVendor(id){
   const t=id?S.vendors.find(x=>String(x.id)===String(id)):S.vendors[S.vendors.length-1];
   if(t)await fbSave("vendors",t);
 }
-async function syncSettings(){await fbSaveMeta("settings",{couple:S.couple,income:S.income,lang:S.lang,darkMode:S.darkMode,profilePhoto:"Foto_Profil.jpeg"||null,coverPhoto:"Cover_Profil.jpeg"||null});}
+async function syncBrismed(id){
+  const b=id?S.brismed.find(x=>String(x.id)===String(id)):S.brismed[S.brismed.length-1];
+  if(b)await fbSave("brismed",b);
+}
 async function syncNotif(){await fbSaveMeta("notif",{...S.notif});}
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1260,6 +1668,7 @@ async function initFirebase(){
         /* Settings/profil SELALU dari Firestore, collections dari RTDB (lebih cepat) */
         await loadFromFirestore(); /* settings, notif — Firestore only */
         await loadFromRTDB();     /* collections (tx, tamu, dll) — RTDB */
+        syncBrismedBudget();      /* restore brismed => transactions */
         startRTDBListener();      /* live sync untuk collections */
         hideLoadingOverlay();
         launchApp();
@@ -1462,12 +1871,21 @@ document.addEventListener("click",function(e){
     var syncId=id||S.vendors[S.vendors.length-1].id;
     syncVendor(syncId);
   };
+  /* --- saveBrismed --- */
+  var _sBrm=saveBrismed;
+  saveBrismed=function(id){
+    _sBrm(id);
+    var syncId=id||S.brismed[S.brismed.length-1].id;
+    syncBrismed(syncId);
+  };
+  /* --- saveBrismedItem (syncs budget + firebase) — hooked directly, not wrapped to avoid loops --- */
   /* --- delItem --- */
   var _del=delItem;
   delItem=function(type,id){
-    const map={tx:"transactions",ses:"seserahan",guest:"guests",doc:"documents",vendor:"vendors"};
+    const map={tx:"transactions",ses:"seserahan",guest:"guests",doc:"documents",vendor:"vendors",brismed:"brismed"};
     if(!confirm(L("itemDeleted")+"?"))return;
     if(map[type])S[map[type]]=S[map[type]].filter(x=>String(x.id)!==String(id));
+    if(type==="brismed"){syncBrismedBudget();}
     closeModal();renderPage(curTab);showToast(L("itemDeleted"));
     if(map[type])fbDelete(map[type],id);
   };
