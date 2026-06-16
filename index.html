@@ -2,7 +2,7 @@
 <html lang="id" id="html-root">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Wedding Planner</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -18,8 +18,8 @@
 :root{--rose:#7D3C52;--rose-light:#F5D6E3;--rose-dark:#5C2A3C;--rose-mid:#C0637D;--teal:#3D7A6E;--teal-light:#E2F5F0;--teal-dark:#2A5C52;--cream:#FAF8F5;--white:#FFFFFF;--border:#E5DDD6;--border-light:#EEE8E2;--gray:#6B6460;--gray-light:#F0EBE6;--dark:#2C1A14;--pink-bg:#FDE8F2;--pink-card:#F9EEF4;--amber-bg:#FEF3E2;--amber:#8B5E1A;--success-bg:#E2F5F0;--success:#1A6B55;--danger-bg:#FFECEC;--danger:#8B2020;--bg-page:#E0D8D0;--shadow:rgba(0,0,0,.15);}
 .dark{--cream:#1A1410;--white:#242018;--border:#3A3028;--border-light:#302820;--gray:#A8A098;--gray-light:#2E2820;--dark:#F0EAE0;--pink-bg:#2E1820;--pink-card:#281618;--amber-bg:#2A200A;--amber:#D4A050;--success-bg:#0E2018;--success:#4ACC8A;--danger-bg:#200A0A;--danger:#FF6B6B;--bg-page:#100C08;--rose-light:#3A1828;--teal-light:#0E2018;}
 html,body{height:100%;margin:0;padding:0;background:var(--bg-page);transition:background .3s}
-body{font-family:"DM Sans",sans-serif;color:var(--dark);overflow:hidden;transition:color .3s}
-.app{display:flex;flex-direction:column;width:100%;max-width:480px;height:100vh;height:100dvh;margin:0 auto;background:var(--cream);box-shadow:0 0 60px var(--shadow);transition:background .3s;overflow:hidden}
+body{font-family:"DM Sans",sans-serif;color:var(--dark);overflow-x:hidden;transition:color .3s}
+.app{display:flex;flex-direction:column;position:fixed;top:0;left:50%;right:auto;bottom:0;width:100%;max-width:480px;transform:translateX(-50%);background:var(--cream);box-shadow:0 0 60px var(--shadow);transition:background .3s;overflow:hidden;-webkit-overflow-scrolling:touch}
 .header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px 12px;background:var(--white);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:60;flex-shrink:0;transition:background .3s}
 .brand{font-family:"Cormorant Garamond",serif;font-size:20px;color:var(--teal);font-style:italic;font-weight:600;letter-spacing:.5px}
 .hicons{display:flex;gap:6px}
@@ -27,12 +27,12 @@ body{font-family:"DM Sans",sans-serif;color:var(--dark);overflow:hidden;transiti
 .hicon:hover{background:var(--gray-light);color:var(--dark)}
 .notif-dot{position:absolute;top:5px;right:5px;width:8px;height:8px;background:var(--danger);border-radius:50%;border:1.5px solid var(--white)}
 #btn-notif{position:relative}
-.screen{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding-bottom:20px;-webkit-overflow-scrolling:touch;min-height:0}
+.screen{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding-bottom:80px;-webkit-overflow-scrolling:touch;min-height:0;overscroll-behavior:contain}
 .screen::-webkit-scrollbar{display:none}
-.tabbar{display:flex;background:var(--white);border-top:1px solid var(--border);flex-shrink:0;transition:background .3s;padding-bottom:env(safe-area-inset-bottom,0px)}
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;padding:13px 0 14px;cursor:pointer;font-size:8.5px;color:var(--gray);gap:4px;border-top:2.5px solid transparent;transition:all .2s;letter-spacing:.2px;text-transform:uppercase;font-weight:600;user-select:none;-webkit-tap-highlight-color:transparent}
+.tabbar{display:flex;background:var(--white);border-top:1px solid var(--border);flex-shrink:0;transition:background .3s;padding-bottom:env(safe-area-inset-bottom,0px);position:relative;z-index:10;touch-action:manipulation}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 2px 12px;cursor:pointer;font-size:8px;color:var(--gray);gap:3px;border-top:2.5px solid transparent;transition:all .2s;letter-spacing:.2px;text-transform:uppercase;font-weight:600;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation;min-width:0;overflow:hidden}
 .tab.active{color:var(--teal);border-top-color:var(--teal)}
-.tab i{font-size:22px;line-height:1}
+.tab i{font-size:20px;line-height:1;flex-shrink:0}
 .card{background:var(--white);border-radius:16px;padding:16px;margin:0 14px 12px;border:1px solid var(--border);transition:background .3s}
 .card-sm{background:var(--white);border-radius:12px;padding:12px 14px;border:1px solid var(--border);transition:background .3s}
 .grad-card{background:linear-gradient(135deg,#F9E4EE,#DFF0EB);border-radius:16px;padding:16px;margin:0 14px 12px}
@@ -53,7 +53,7 @@ body{font-family:"DM Sans",sans-serif;color:var(--dark);overflow:hidden;transiti
 .pill.active{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:600}
 .progress-bar{height:5px;background:var(--gray-light);border-radius:5px;overflow:hidden}
 .progress-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,var(--rose),var(--teal))}
-.fab{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--rose),var(--teal));border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;position:sticky;bottom:18px;left:calc(100% - 66px);margin-right:14px;margin-top:-26px;box-shadow:0 4px 18px rgba(93,44,60,.35);transition:transform .15s}
+.fab{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--rose),var(--teal));border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;position:sticky;bottom:16px;left:calc(100% - 66px);margin-right:14px;margin-top:-26px;box-shadow:0 4px 18px rgba(93,44,60,.35);transition:transform .15s;touch-action:manipulation;z-index:5}
 .fab:hover{transform:scale(1.07)}
 .fab:active{transform:scale(.96)}
 .field-label{font-size:10px;font-weight:600;color:var(--gray);letter-spacing:.7px;margin-bottom:4px;margin-top:15px;display:block;text-transform:uppercase}
@@ -69,7 +69,7 @@ textarea.input-field:focus{border-color:var(--teal)}
 .btn-primary:hover{opacity:.9}
 .btn-danger{width:100%;background:linear-gradient(135deg,#8B2020,#5C2A3C);color:#fff;border:none;border-radius:50px;padding:13px;font-family:"DM Sans",sans-serif;font-size:13.5px;cursor:pointer;font-weight:600;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:7px}
 .btn-outline-danger{width:100%;border:1.5px solid #E0A0A0;background:transparent;color:var(--danger);border-radius:12px;padding:13px;font-family:"DM Sans",sans-serif;font-size:14px;cursor:pointer;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:500}
-.modal-overlay{position:fixed;inset:0;background:rgba(30,15,10,.6);z-index:200;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)}
+.modal-overlay{position:fixed;inset:0;background:rgba(30,15,10,.6);z-index:200;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);touch-action:none}
 .modal-overlay.open{display:flex}
 .modal-sheet{background:var(--white);border-radius:24px 24px 0 0;padding:24px 20px 44px;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;scrollbar-width:none;transition:background .3s}
 .modal-sheet::-webkit-scrollbar{display:none}
@@ -140,6 +140,30 @@ textarea.input-field:focus{border-color:var(--teal)}
 .lang-option:last-child{margin-bottom:0}
 .lang-option.active,.lang-option:hover{border-color:var(--teal);background:var(--teal-light)}
 .lang-flag{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px}
+/* ── MOBILE FIXES ── */
+@media (max-width:480px){
+  .tab span{font-size:7.5px;letter-spacing:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .tab{padding:9px 1px 11px;gap:3px}
+  .tab i{font-size:19px}
+  .card{margin:0 10px 10px;padding:14px 13px}
+  .grad-card{margin:0 10px 10px}
+  .section-head{font-size:30px}
+  .hero-banner h1{font-size:36px}
+}
+/* Touch-action for all interactive elements to remove 300ms delay */
+button,.tab,.pill,.hicon,.edit-btn,.rsvp-seg,.cat-card,.setting-row,.doc-row,.help-topic-item,
+.back-btn,.lang-option,.fab,.btn-primary,.btn-danger,.btn-outline-danger,.cat-confirm-btn,
+.cat-trigger,.circle-check,[onclick],[data-edit-tx],[data-edit-ses],[data-edit-guest],
+[data-edit-doc],[data-edit-vendor],[data-ok-vendor],[data-cycle-doc],[data-bud-filter],
+[data-ses-filter],[data-edit-brm-person],[data-add-brm-item],[data-edit-brm-item],
+[data-save],[data-del],[data-tx-type],[data-ses-status],[data-tx-st],[data-g-group],
+[data-g-rsvp],[data-g-vip],[data-brmg-group],[data-brmg-rsvp],[data-brmg-vip],[data-brmi-st]
+{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+/* Prevent any element from blocking tab interaction */
+.screen > *{pointer-events:auto}
+/* Ensure html/body don't trap scroll */
+html{-webkit-text-size-adjust:100%;height:-webkit-fill-available}
+body{min-height:-webkit-fill-available}
 </style>
 </head>
 <body>
@@ -411,20 +435,39 @@ function requestPushOnLoad(){
 }
 
 /* ── Tabs ── */
+function switchToTab(name){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  const activeTab=document.getElementById("tab-"+name);
+  if(activeTab)activeTab.classList.add("active");
+  ["ringkasan","anggaran","seserahan","tamu","dokumen","vendor"].forEach(p=>{
+    const pg=document.getElementById("page-"+p);
+    if(pg)pg.style.display=p===name?"block":"none";
+  });
+  curTab=name;renderPage(name);
+}
+
 function initTabs(){
   ["ringkasan","anggaran","seserahan","tamu","dokumen","vendor"].forEach(name=>{
-    document.getElementById("tab-"+name).addEventListener("click",function(){
-      document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
-      this.classList.add("active");
-      ["ringkasan","anggaran","seserahan","tamu","dokumen","vendor"].forEach(p=>{
-        document.getElementById("page-"+p).style.display=p===name?"block":"none";
-      });
-      curTab=name;renderPage(name);
+    const el=document.getElementById("tab-"+name);
+    if(!el)return;
+    // Both click and touchend for max mobile compatibility
+    let touchMoved=false;
+    el.addEventListener("touchstart",function(){touchMoved=false;},{passive:true});
+    el.addEventListener("touchmove",function(){touchMoved=true;},{passive:true});
+    el.addEventListener("touchend",function(e){
+      if(!touchMoved){e.preventDefault();switchToTab(name);}
+    },{passive:false});
+    el.addEventListener("click",function(e){
+      // Only fire click if not already handled by touchend
+      if(!("ontouchstart" in window))switchToTab(name);
     });
   });
-  document.getElementById("btn-notif").addEventListener("click",()=>showNotifPanel());
-  document.getElementById("btn-profile").addEventListener("click",()=>openSub("main"));
-  document.getElementById("modal-overlay").addEventListener("click",function(e){if(e.target===this)closeModal();});
+  const notifBtn=document.getElementById("btn-notif");
+  if(notifBtn)notifBtn.addEventListener("click",()=>showNotifPanel());
+  const profBtn=document.getElementById("btn-profile");
+  if(profBtn)profBtn.addEventListener("click",()=>openSub("main"));
+  const modalOv=document.getElementById("modal-overlay");
+  if(modalOv)modalOv.addEventListener("click",function(e){if(e.target===this)closeModal();});
 }
 
 function renderPage(name){
@@ -483,7 +526,7 @@ function bindListEvents(){
   const fabBrmSes=document.getElementById("fab-brismed-ses");
   if(fabBrmSes)fabBrmSes.onclick=()=>openModal("brismed-ses",null);
   const bAG=document.getElementById("btn-add-guest");if(bAG)bAG.onclick=()=>openModal("guest",null);
-  const seeAll=document.getElementById("see-all-vendors");if(seeAll)seeAll.onclick=()=>document.getElementById("tab-vendor").click();
+  const seeAll=document.getElementById("see-all-vendors");if(seeAll)seeAll.onclick=()=>switchToTab("vendor");
 }
 
 function refreshGuestList(){
