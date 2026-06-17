@@ -25,12 +25,12 @@ body{font-family:"DM Sans",sans-serif;color:var(--dark);overflow-x:hidden;transi
 .hicons{display:flex;gap:6px}
 .hicon{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--white);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--gray);transition:all .2s;flex-shrink:0}
 .hicon:hover{background:var(--gray-light);color:var(--dark)}
-.screen{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding-bottom:10px}
+.screen{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding-bottom:80px}
 .screen::-webkit-scrollbar{display:none}
 .tabbar{display:flex;background:var(--white);border-top:1px solid var(--border);flex-shrink:0;transition:background .3s}
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 0 10px;cursor:pointer;font-size:8px;color:var(--gray);gap:3px;border-top:2px solid transparent;transition:all .2s;letter-spacing:.2px;text-transform:uppercase;font-weight:500;user-select:none}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;padding:11px 0 13px;cursor:pointer;font-size:8px;color:var(--gray);gap:4px;border-top:2.5px solid transparent;transition:all .2s;letter-spacing:.2px;text-transform:uppercase;font-weight:500;user-select:none}
 .tab.active{color:var(--teal);border-top-color:var(--teal)}
-.tab i{font-size:18px;line-height:1}
+.tab i{font-size:20px;line-height:1}
 .card{background:var(--white);border-radius:16px;padding:16px;margin:0 14px 12px;border:1px solid var(--border);transition:background .3s}
 .card-sm{background:var(--white);border-radius:12px;padding:12px 14px;border:1px solid var(--border);transition:background .3s}
 .grad-card{background:linear-gradient(135deg,#F9E4EE,#DFF0EB);border-radius:16px;padding:16px;margin:0 14px 12px}
@@ -51,7 +51,8 @@ body{font-family:"DM Sans",sans-serif;color:var(--dark);overflow-x:hidden;transi
 .pill.active{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:600}
 .progress-bar{height:5px;background:var(--gray-light);border-radius:5px;overflow:hidden}
 .progress-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,var(--rose),var(--teal))}
-.fab{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--rose),var(--teal));border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;position:sticky;bottom:18px;left:calc(100% - 66px);margin-right:14px;margin-top:-26px;box-shadow:0 4px 18px rgba(93,44,60,.35);transition:transform .15s}
+.fab{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--rose),var(--teal));border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;position:fixed;bottom:82px;right:calc(50% - 226px);box-shadow:0 4px 18px rgba(93,44,60,.35);transition:transform .15s;z-index:50}
+@media(max-width:480px){.fab{right:18px}}
 .fab:hover{transform:scale(1.07)}
 .fab:active{transform:scale(.96)}
 .field-label{font-size:10px;font-weight:600;color:var(--gray);letter-spacing:.7px;margin-bottom:4px;margin-top:15px;display:block;text-transform:uppercase}
@@ -324,35 +325,120 @@ function updateNotifDot(){
   }else{if(dot)dot.remove();}
 }
 function showNotifPanel(){
-  if(document.getElementById("notif-panel-overlay"))return;
-  const overlay=document.createElement("div");overlay.id="notif-panel-overlay";
-  overlay.style.cssText="position:fixed;inset:0;background:rgba(30,15,10,.6);z-index:200;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)";
-  const sheet=document.createElement("div");
-  sheet.style.cssText="background:var(--white);border-radius:24px 24px 0 0;padding:20px 20px 44px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto;scrollbar-width:none";
-  const hdr=document.createElement("div");hdr.style.cssText="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px";
-  hdr.innerHTML='<div style="font-family:\'Cormorant Garamond\',serif;font-size:22px;font-weight:700;color:var(--dark)">Notifikasi</div><div style="display:flex;gap:6px"></div>';
-  const clearBtn=document.createElement("button");clearBtn.className="hicon";clearBtn.innerHTML='<i class="ti ti-trash" style="font-size:15px"></i>';
-  clearBtn.onclick=()=>{S.notifLog=[];updateNotifDot();overlay.remove();};
-  const closeBtn=document.createElement("button");closeBtn.className="hicon";closeBtn.innerHTML='<i class="ti ti-x"></i>';closeBtn.onclick=()=>overlay.remove();
-  hdr.querySelector("div:last-child").appendChild(clearBtn);hdr.querySelector("div:last-child").appendChild(closeBtn);
-  sheet.appendChild(hdr);
+  /* Render as full subpage */
+  const sp=document.getElementById("subpage-container");
+  sp.classList.add("open");
+  sp.innerHTML=buildNotifPage();
+  initNotifPageEvents();
+}
+
+let _notifFilter="semua";
+
+function buildNotifPage(){
   const list=S.notifLog||[];
-  if(list.length===0){
-    const empty=document.createElement("div");empty.style.cssText="text-align:center;padding:36px 0;color:var(--gray)";
-    empty.innerHTML='<i class="ti ti-bell-off" style="font-size:42px;display:block;margin-bottom:10px"></i>Belum ada notifikasi';
-    sheet.appendChild(empty);
-  }else{
-    list.forEach(n=>{
-      const row=document.createElement("div");
-      row.style.cssText="display:flex;align-items:flex-start;gap:12px;padding:13px 0;border-bottom:1px solid var(--border-light)";
-      const d=new Date(n.time);const now=new Date();const diff=Math.round((now-d)/60000);
-      const timeStr=diff<1?"Baru saja":diff<60?diff+" mnt lalu":diff<1440?Math.round(diff/60)+" jam lalu":d.toLocaleDateString("id-ID",{day:"numeric",month:"short"});
-      row.innerHTML=`<div style="width:38px;height:38px;border-radius:12px;background:var(--teal-light);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${n.icon}" style="font-size:18px;color:var(--teal)"></i></div><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:500;color:var(--dark);line-height:1.4">${n.msg}</div><div style="font-size:11px;color:var(--gray);margin-top:3px">${timeStr}</div></div>`;
-      sheet.appendChild(row);
-    });
+  const filters=[
+    {key:"semua",label:"Semua",icon:"ti-bell"},
+    {key:"transaksi",label:"Transaksi",icon:"ti-report-money"},
+    {key:"tamu",label:"Tamu",icon:"ti-users"},
+    {key:"seserahan",label:"Seserahan",icon:"ti-gift"},
+    {key:"vendor",label:"Vendor",icon:"ti-building-store"},
+    {key:"bridesmaid",label:"Bridesmaid",icon:"ti-dress"},
+    {key:"dokumen",label:"Dokumen",icon:"ti-file-check"},
+  ];
+  const iconMap={
+    "ti-cash":"transaksi","ti-report-money":"transaksi","ti-gift":"seserahan",
+    "ti-users":"tamu","ti-user-plus":"tamu","ti-building-store":"vendor",
+    "ti-package":"bridesmaid","ti-dress":"bridesmaid","ti-file-check":"dokumen","ti-trash":"semua"
+  };
+  const filtered=_notifFilter==="semua"?list:list.filter(n=>{
+    const cat=iconMap[n.icon]||"lain";
+    return cat===_notifFilter;
+  });
+  const now=new Date();
+  function timeStr(t){
+    const diff=Math.round((now-new Date(t))/60000);
+    if(diff<1)return"Baru saja";
+    if(diff<60)return diff+" mnt lalu";
+    if(diff<1440)return Math.round(diff/60)+" jam lalu";
+    return new Date(t).toLocaleDateString("id-ID",{day:"numeric",month:"short",year:"numeric"});
   }
-  overlay.appendChild(sheet);overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
-  document.body.appendChild(overlay);
+  function iconColor(ic){
+    const m={"ti-cash":"var(--teal)","ti-report-money":"var(--teal)","ti-gift":"var(--rose)",
+      "ti-users":"var(--teal)","ti-user-plus":"var(--teal)","ti-building-store":"var(--amber)",
+      "ti-package":"var(--rose-mid)","ti-file-check":"var(--teal)","ti-trash":"var(--danger)","ti-bell":"var(--gray)"};
+    return m[ic]||"var(--teal)";
+  }
+  function iconBg(ic){
+    const m={"ti-cash":"var(--teal-light)","ti-report-money":"var(--teal-light)","ti-gift":"var(--pink-bg)",
+      "ti-users":"var(--teal-light)","ti-user-plus":"var(--teal-light)","ti-building-store":"var(--amber-bg)",
+      "ti-package":"var(--pink-bg)","ti-file-check":"var(--teal-light)","ti-trash":"var(--danger-bg)","ti-bell":"var(--gray-light)"};
+    return m[ic]||"var(--teal-light)";
+  }
+
+  return `<div class="back-header" style="justify-content:space-between">
+  <div style="display:flex;align-items:center;gap:12px">
+    <button class="back-btn" id="notif-close-btn"><i class="ti ti-arrow-left" style="font-size:16px"></i></button>
+    <span style="font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:700;color:var(--rose)">Notifikasi</span>
+  </div>
+  <div style="display:flex;gap:6px">
+    <button class="hicon" id="notif-mark-read" title="Tandai semua terbaca"><i class="ti ti-check" style="font-size:15px"></i></button>
+    <button class="hicon" id="notif-clear-btn" title="Hapus semua"><i class="ti ti-trash" style="font-size:15px;color:var(--danger)"></i></button>
+  </div>
+</div>
+
+<div style="padding:10px 14px 0">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <span style="font-size:12.5px;color:var(--gray)">${list.length} notifikasi total</span>
+    ${list.length>0?`<span style="font-size:11.5px;font-weight:700;background:var(--teal-light);color:var(--teal);padding:3px 10px;border-radius:20px">${filtered.length} ditampilkan</span>`:""}
+  </div>
+  <div style="display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding-bottom:10px">
+    ${filters.map(f=>`<button class="notif-filter-pill${_notifFilter===f.key?" notif-filter-active":""}" data-notif-filter="${f.key}" style="display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:50px;border:1.5px solid ${_notifFilter===f.key?"var(--teal)":"var(--border)"};background:${_notifFilter===f.key?"var(--teal)":"var(--white)"};color:${_notifFilter===f.key?"#fff":"var(--gray)"};font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;flex-shrink:0"><i class="ti ${f.icon}" style="font-size:13px"></i>${f.label}</button>`).join("")}
+  </div>
+</div>
+
+<div id="notif-list-body" style="padding:0 14px 40px">
+${filtered.length===0?`
+<div style="text-align:center;padding:52px 20px;color:var(--gray)">
+  <div style="width:72px;height:72px;border-radius:50%;background:var(--gray-light);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+    <i class="ti ti-bell-off" style="font-size:32px"></i>
+  </div>
+  <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--dark);margin-bottom:6px">Belum Ada Notifikasi</div>
+  <div style="font-size:13px">Aktivitas akan muncul di sini</div>
+</div>
+`:filtered.map((n,i)=>`
+<div style="display:flex;align-items:flex-start;gap:13px;padding:14px 0;${i<filtered.length-1?"border-bottom:1px solid var(--border-light)":""}">
+  <div style="width:44px;height:44px;border-radius:14px;background:${iconBg(n.icon)};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+    <i class="ti ${n.icon}" style="font-size:20px;color:${iconColor(n.icon)}"></i>
+  </div>
+  <div style="flex:1;min-width:0">
+    <div style="font-size:13.5px;font-weight:500;color:var(--dark);line-height:1.4">${n.msg}</div>
+    <div style="font-size:11px;color:var(--gray);margin-top:4px;display:flex;align-items:center;gap:4px">
+      <i class="ti ti-clock" style="font-size:11px"></i>${timeStr(n.time)}
+    </div>
+  </div>
+</div>`).join("")}
+</div>`;
+}
+
+function initNotifPageEvents(){
+  const sp=document.getElementById("subpage-container");
+  const closeBtn=document.getElementById("notif-close-btn");
+  if(closeBtn)closeBtn.onclick=()=>{sp.classList.remove("open");};
+  const clearBtn=document.getElementById("notif-clear-btn");
+  if(clearBtn)clearBtn.onclick=()=>{
+    if(!confirm("Hapus semua notifikasi?"))return;
+    S.notifLog=[];updateNotifDot();
+    sp.innerHTML=buildNotifPage();initNotifPageEvents();
+  };
+  const markBtn=document.getElementById("notif-mark-read");
+  if(markBtn)markBtn.onclick=()=>{showToast("Semua ditandai terbaca");};
+  sp.querySelectorAll("[data-notif-filter]").forEach(btn=>{
+    btn.onclick=()=>{
+      _notifFilter=btn.dataset.notifFilter;
+      sp.innerHTML=buildNotifPage();
+      initNotifPageEvents();
+    };
+  });
 }
 
 /* ── Budget items for payment dropdown ── */
@@ -589,11 +675,26 @@ function pgAnggaran(){
   </div>
   <div class="pill-row">${[["semua",L("allFilter")],["pemasukan",L("incomeFilter")],["pengeluaran",L("expenseFilter")]].map(([v,lbl])=>`<span class="pill${S.budFilter===v?" active":""}" data-bud-filter="${v}">${lbl}</span>`).join("")}</div>
   ${sorted.map(g=>`<div style="font-size:10.5px;font-weight:600;color:var(--gray);letter-spacing:.8px;padding:0 18px 8px;text-transform:uppercase">${g.label}</div>
-  <div class="card">${g.items.map((tx,i)=>`<div class="tx-row" style="${i===g.items.length-1?"border-bottom:none;padding-bottom:0;margin-bottom:0":""}">
-    <div class="tx-icon"><i class="ti ${catIcon(tx.cat)}"></i></div>
-    <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${tx.name}</div><div style="font-size:11.5px;color:var(--gray);margin-top:2px">${tx.cat}${tx.status?" &middot; <span class=\"badge "+sCls(tx.status)+"\"><i class=\"ti "+sIcon(tx.status)+"\" style=\"font-size:10px\"></i> "+tx.status+"</span>":""}</div></div>
-    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0"><div style="font-weight:700;font-size:13px;color:${tx.type==="in"?"var(--teal)":"var(--dark)"};white-space:nowrap">${tx.type==="in"?"+":"-"}${fmt(tx.amount)}</div><button class="edit-btn" data-edit-tx="${tx.id}"><i class="ti ti-pencil" style="font-size:13px"></i></button></div>
-  </div>`).join("")}</div>`).join("")}
+  <div class="card">${g.items.map((tx,i)=>{
+    const isPayType=tx.type==="pay";
+    const payStClr=tx.payStatus==="Lunas"?"var(--success)":tx.payStatus==="Sebagian"?"var(--teal)":"var(--amber)";
+    const payStBg=tx.payStatus==="Lunas"?"var(--success-bg)":tx.payStatus==="Sebagian"?"var(--teal-light)":"var(--amber-bg)";
+    const payStIc=tx.payStatus==="Lunas"?"ti-circle-check":tx.payStatus==="Sebagian"?"ti-chart-pie-2":"ti-circle-half-2";
+    return`<div class="tx-row" style="${i===g.items.length-1?"border-bottom:none;padding-bottom:0;margin-bottom:0":""}">
+    <div class="tx-icon" style="background:${isPayType?"var(--teal-light)":"var(--gray-light)"}"><i class="ti ${isPayType?"ti-cash":catIcon(tx.cat)}" style="color:${isPayType?"var(--teal)":"var(--gray)"}"></i></div>
+    <div style="flex:1;min-width:0">
+      <div style="font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${tx.name}</div>
+      <div style="font-size:11.5px;color:var(--gray);margin-top:2px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+        ${tx.cat}
+        ${isPayType&&tx.payStatus?`<span style="display:inline-flex;align-items:center;gap:3px;background:${payStBg};color:${payStClr};padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700"><i class="ti ${payStIc}" style="font-size:9px"></i>${tx.payStatus}</span>`:""}
+        ${!isPayType&&tx.status?`<span class="badge ${sCls(tx.status)}"><i class="ti ${sIcon(tx.status)}" style="font-size:10px"></i> ${tx.status}</span>`:""}
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+      <div style="font-weight:700;font-size:13px;color:${tx.type==="in"?"var(--teal)":isPayType?"var(--rose-mid)":"var(--dark)"};white-space:nowrap">${tx.type==="in"?"+":"-"}${fmt(tx.amount)}</div>
+      <button class="edit-btn" data-edit-tx="${tx.id}"><i class="ti ti-pencil" style="font-size:13px"></i></button>
+    </div>
+  </div>`;}).join("")}</div>`).join("")}
   <button class="fab" id="fab-tx"><i class="ti ti-plus" style="font-size:22px"></i></button>`;
 }
 
@@ -810,8 +911,12 @@ function bindModalEvents(type,id,brmId){
   if(brmPlus)brmPlus.onclick=()=>{brmGCount++;if(brmDisp)brmDisp.textContent=brmGCount;};
   /* Brismed item status pills */
   mc.querySelectorAll("[data-brmi-st]").forEach(p=>{p.onclick=()=>{brmItemStatus=p.dataset.brmiSt;mc.querySelectorAll("[data-brmi-st]").forEach(x=>x.classList.toggle("active",x===p));};});
-  /* Brismed seserahan status pills */
-  mc.querySelectorAll("[data-brms-st]").forEach(p=>{p.onclick=()=>{brmSesStatus=p.dataset.brmsSt;mc.querySelectorAll("[data-brms-st]").forEach(x=>x.classList.toggle("active",x===p));};});
+  /* Pay status pills */
+  mc.querySelectorAll("[data-pay-stat]").forEach(p=>{p.onclick=()=>{
+    const v=p.dataset.payStat;
+    const hid=document.getElementById("pay-stat-hid");if(hid)hid.value=v;
+    mc.querySelectorAll("[data-pay-stat]").forEach(x=>x.classList.toggle("active",x===p));
+  };});
   const vpBtn=mc.querySelector("#vendor-photo-btn");
   if(vpBtn)vpBtn.onclick=()=>pickPhoto(d=>{
     vendorPhoto=d;
@@ -899,10 +1004,11 @@ function buildTxForm(id){
   const payStatuses=[["Belum Dibayar",L("notUnpaid")],["DP",L("dp")],["Lunas",L("paid")],["Tabungan","Tabungan"]];
   const budItems=getBudgetItems();
   const selItem=txPaySel?budItems.find(b=>b.id===txPaySel):null;
+  const payStatBayar=ex&&ex.type==="pay"?(ex.payStatus||"DP"):"DP";
   const payForm=`
-<span class="field-label">NOMINAL</span>
+<span class="field-label">NOMINAL DIBAYAR</span>
 <div class="money-wrap"><span class="money-pfx">Rp</span><input id="m-tx-amt" class="money-input" inputmode="numeric" placeholder="0" value="${ex&&ex.type==="pay"?fmtN(ex.amount):""}"></div>
-<span class="field-label">NAMA / ITEM</span>
+<span class="field-label">ITEM YANG DIBAYAR</span>
 <div style="position:relative;margin-top:4px">
   <div id="pay-sel-display" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1.5px solid var(--border);border-radius:12px;cursor:pointer;background:var(--white)" onclick="togglePayDropdown()">
     <div style="flex:1;min-width:0">
@@ -916,10 +1022,29 @@ function buildTxForm(id){
   </div>
   <input type="hidden" id="pay-ref-id" value="${txPaySel||""}">
 </div>
+<span class="field-label">STATUS PEMBAYARAN</span>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px">
+  <div class="rsvp-seg${payStatBayar==="DP"?" active":""}" data-pay-stat="DP" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px">
+    <i class="ti ti-circle-half-2" style="font-size:20px;color:var(--amber)"></i>
+    <span style="font-size:12px;font-weight:700">DP</span>
+    <span style="font-size:9px;color:var(--gray);text-align:center">Uang Muka</span>
+  </div>
+  <div class="rsvp-seg${payStatBayar==="Sebagian"?" active":""}" data-pay-stat="Sebagian" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px">
+    <i class="ti ti-chart-pie-2" style="font-size:20px;color:var(--teal)"></i>
+    <span style="font-size:12px;font-weight:700">Sebagian</span>
+    <span style="font-size:9px;color:var(--gray);text-align:center">Bayar Sebagian</span>
+  </div>
+  <div class="rsvp-seg${payStatBayar==="Lunas"?" active":""}" data-pay-stat="Lunas" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px">
+    <i class="ti ti-circle-check" style="font-size:20px;color:var(--success)"></i>
+    <span style="font-size:12px;font-weight:700">Lunas</span>
+    <span style="font-size:9px;color:var(--gray);text-align:center">Lunas Penuh</span>
+  </div>
+</div>
+<input type="hidden" id="pay-stat-hid" value="${payStatBayar}">
 <span class="field-label">CATATAN</span>
 <input id="m-tx-notes" class="input-field" placeholder="${L("notesPh")}" value="${ex&&ex.type==="pay"&&ex.notes?ex.notes:""}">
 ${isEdit?`<button class="btn-danger" data-del="tx"><i class="ti ti-trash" style="font-size:15px"></i>${L("deleteBudget")}</button>`:""}
-<button class="btn-primary" data-save="tx" style="background:linear-gradient(135deg,#2A5C52,#3D7A6E)"><i class="ti ti-cash" style="font-size:15px"></i>Bayar</button>`;
+<button class="btn-primary" data-save="tx" style="background:linear-gradient(135deg,#2A5C52,#3D7A6E)"><i class="ti ti-cash" style="font-size:15px"></i>Simpan Pembayaran</button>`;
 
   return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div class="modal-title">${isEdit?L("editBudget"):L("addBudget")}</div><button class="hicon" id="modal-close"><i class="ti ti-x"></i></button></div>
 <span class="field-label">${L("transactionType")}</span>
@@ -965,9 +1090,9 @@ function switchTxType(type){
   const selItem=txPaySel?budItems.find(b=>b.id===txPaySel):null;
   if(type==="pay"){
     body.innerHTML=`
-<span class="field-label">NOMINAL</span>
+<span class="field-label">NOMINAL DIBAYAR</span>
 <div class="money-wrap"><span class="money-pfx">Rp</span><input id="m-tx-amt" class="money-input" inputmode="numeric" placeholder="0"></div>
-<span class="field-label">NAMA / ITEM</span>
+<span class="field-label">ITEM YANG DIBAYAR</span>
 <div style="position:relative;margin-top:4px">
   <div id="pay-sel-display" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1.5px solid var(--border);border-radius:12px;cursor:pointer;background:var(--white)" onclick="togglePayDropdown()">
     <div style="flex:1;min-width:0">${selItem?`<div style="font-weight:600;font-size:13.5px;color:var(--dark)">${selItem.label}</div><div style="font-size:11px;color:var(--gray);margin-top:1px">${selItem.type} &middot; ${fmt(selItem.price)}</div>`:`<span style="color:var(--gray);font-size:13.5px">Pilih item yang dibayar...</span>`}</div>
@@ -979,10 +1104,34 @@ function switchTxType(type){
   </div>
   <input type="hidden" id="pay-ref-id" value="${txPaySel||""}">
 </div>
+<span class="field-label">STATUS PEMBAYARAN</span>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px">
+  <div class="rsvp-seg active" data-pay-stat="DP" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px">
+    <i class="ti ti-circle-half-2" style="font-size:20px;color:var(--amber)"></i>
+    <span style="font-size:12px;font-weight:700">DP</span>
+    <span style="font-size:9px;color:var(--gray);text-align:center">Uang Muka</span>
+  </div>
+  <div class="rsvp-seg" data-pay-stat="Sebagian" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px">
+    <i class="ti ti-chart-pie-2" style="font-size:20px;color:var(--teal)"></i>
+    <span style="font-size:12px;font-weight:700">Sebagian</span>
+    <span style="font-size:9px;color:var(--gray);text-align:center">Bayar Sebagian</span>
+  </div>
+  <div class="rsvp-seg" data-pay-stat="Lunas" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px">
+    <i class="ti ti-circle-check" style="font-size:20px;color:var(--success)"></i>
+    <span style="font-size:12px;font-weight:700">Lunas</span>
+    <span style="font-size:9px;color:var(--gray);text-align:center">Lunas Penuh</span>
+  </div>
+</div>
+<input type="hidden" id="pay-stat-hid" value="DP">
 <span class="field-label">CATATAN</span>
 <input id="m-tx-notes" class="input-field" placeholder="${L("notesPh")}">
-<button class="btn-primary" data-save="tx" style="background:linear-gradient(135deg,#2A5C52,#3D7A6E)"><i class="ti ti-cash" style="font-size:15px"></i>Bayar</button>`;
+<button class="btn-primary" data-save="tx" style="background:linear-gradient(135deg,#2A5C52,#3D7A6E)"><i class="ti ti-cash" style="font-size:15px"></i>Simpan Pembayaran</button>`;
     bindMoney("m-tx-amt");
+    mc.querySelectorAll("[data-pay-stat]").forEach(p=>{p.onclick=()=>{
+      const v=p.dataset.payStat;const hid=document.getElementById("pay-stat-hid");if(hid)hid.value=v;
+      mc.querySelectorAll("[data-pay-stat]").forEach(x=>x.classList.toggle("active",x===p));
+    };});
+    const savPayBtn=mc.querySelector("[data-save]");if(savPayBtn)savPayBtn.onclick=()=>saveTx(null);
   } else {
     body.innerHTML=`
 <span class="field-label">${L("nominal")}</span>
@@ -1006,14 +1155,15 @@ function saveTx(id){
     const amt=moneyVal("m-tx-amt");
     const refId=(document.getElementById("pay-ref-id")||{}).value||"";
     const notes=(document.getElementById("m-tx-notes")||{}).value||"";
+    const payStatus=(document.getElementById("pay-stat-hid")||{}).value||"DP";
     if(!amt){showToast(L("fillRequired"));return;}
     if(!refId){showToast("Pilih item yang dibayar");return;}
     const budItems=getBudgetItems();
     const selItem=budItems.find(b=>b.id===refId);
     const itemName=selItem?selItem.label:"Pembayaran";
     const cat=selItem&&selItem.type==="Vendor"?"Vendor":selItem&&selItem.type==="Seserahan"?"Seserahan":"Bridesmaid";
-    if(id){const tx=S.transactions.find(x=>String(x.id)===String(id));if(tx)Object.assign(tx,{name:"Bayar: "+itemName,cat,type:"pay",amount:amt,status:"Lunas",notes,payRefId:refId,date:tx.date});showToast("Pembayaran diperbarui");}
-    else{S.transactions.unshift({id:Date.now(),name:"Bayar: "+itemName,cat,type:"pay",amount:amt,status:"Lunas",notes,payRefId:refId,date:new Date().toISOString().split("T")[0]});showToast("Pembayaran dicatat");addNotif("Pembayaran baru dicatat","ti-cash");}
+    if(id){const tx=S.transactions.find(x=>String(x.id)===String(id));if(tx)Object.assign(tx,{name:"Bayar: "+itemName,cat,type:"pay",amount:amt,status:payStatus,payStatus,notes,payRefId:refId,date:tx.date});showToast("Pembayaran diperbarui");}
+    else{S.transactions.unshift({id:Date.now(),name:"Bayar: "+itemName,cat,type:"pay",amount:amt,status:payStatus,payStatus,notes,payRefId:refId,date:new Date().toISOString().split("T")[0]});showToast("Pembayaran dicatat");addNotif("Pembayaran baru dicatat ("+payStatus+")","ti-cash");}
     txPaySel=null;closeModal();renderPage("anggaran");return;
   }
   const name=(document.getElementById("m-tx-name").value||"").trim();
@@ -1061,7 +1211,7 @@ function buildGuestForm(id){
   const ex=id?S.guests.find(x=>String(x.id)===String(id)):null;
   if(ex){gGroup=ex.group;gRsvp=ex.rsvp;gCount=ex.count;gVip=ex.vip;}else{gGroup="Keluarga";gRsvp="Menunggu";gCount=1;gVip=false;}
   const isEdit=!!ex;
-  const grps=[["Keluarga",L("family")],["Teman",L("friend")],["Rekan Kerja",L("colleague")],["Lainnya",L("other")]];
+  const grps=[["Keluarga","Keluarga"],["Teman Wanita","Teman Wanita"],["Teman Pria","Teman Pria"],["Lainnya","Lainnya"]];
   return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div class="modal-title">${isEdit?L("editGuestTitle"):L("addGuestTitle")}</div><button class="hicon" id="modal-close"><i class="ti ti-x"></i></button></div>
 <span class="field-label">${L("fullName")}</span>
 <input id="m-g-name" class="input-field" placeholder="${L("fullNamePh")}" value="${ex?ex.name:""}">
