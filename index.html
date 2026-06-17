@@ -523,7 +523,8 @@ function bindListEvents(){
   document.querySelectorAll("[data-cycle-doc]").forEach(b=>{ b.onclick=()=>cycleDoc(b.dataset.cycleDoc); });
   document.querySelectorAll("[data-bud-filter]").forEach(b=>{ b.onclick=()=>{S.budFilter=b.dataset.budFilter;renderPage("anggaran");}; });
   document.querySelectorAll("[data-ses-filter]").forEach(b=>{ b.onclick=()=>{S.sesFilter=b.dataset.sesFilter;renderPage("seserahan");}; });
-  document.querySelectorAll("[data-guest-filter]").forEach(b=>{ b.onclick=()=>{S.guestFilter=b.dataset.guestFilter;refreshGuestList();}; });
+  document.querySelectorAll("[data-guest-filter]").forEach(b=>{ b.onclick=()=>{S.guestFilter=b.dataset.guestFilter;S.genderFilter="Semua";refreshGuestList();}; });
+  document.querySelectorAll("[data-gender-filter]").forEach(b=>{ b.onclick=()=>{S.genderFilter=b.dataset.genderFilter;refreshGuestList();}; });
   /* Brismed events */
   document.querySelectorAll("[data-edit-brm-person]").forEach(b=>{ b.onclick=()=>openModal("brismed",b.dataset.editBrmPerson); });
   document.querySelectorAll("[data-add-brm-item]").forEach(b=>{ b.onclick=()=>openModal("brismed-item",b.dataset.addBrmItem); });
@@ -547,6 +548,7 @@ function bindListEvents(){
   if(fabBrm)fabBrm.onclick=()=>openModal("brismed",null);
   const fabBrmSes=document.getElementById("fab-brismed-ses");
   if(fabBrmSes)fabBrmSes.onclick=()=>openModal("brismed-ses",null);
+  const fabGuest=document.getElementById("fab-guest");if(fabGuest)fabGuest.onclick=()=>openModal("guest",null);
   const bAG=document.getElementById("btn-add-guest");if(bAG)bAG.onclick=()=>openModal("guest",null);
   const seeAll=document.getElementById("see-all-vendors");if(seeAll)seeAll.onclick=()=>document.getElementById("tab-vendor").click();
 }
@@ -567,6 +569,11 @@ function refreshGuestList(){
     const lbl=GFILTERS.find(([fv])=>fv===v);
     if(lbl)p.innerHTML=lbl[1]+` <span style="font-size:10px;opacity:.75">(${countF(v)})</span>`;
     p.classList.toggle("active",v===gf);
+  });
+  /* refresh gender filter pills */
+  const genderFilter=S.genderFilter||"Semua";
+  document.querySelectorAll("[data-gender-filter]").forEach(p=>{
+    p.classList.toggle("active",p.dataset.genderFilter===genderFilter);
   });
 }
 function refreshVendorList(){
@@ -740,15 +747,23 @@ function pgBrismedTamu(){
     const mf=gf==="Semua"||g.group===gf;
     return mq&&mf;
   });
-  return `<div style="margin:0 14px 12px"><button class="btn-primary" style="margin:0" id="btn-add-guest"><i class="ti ti-user-plus" style="font-size:16px"></i>${L("addGuest")}</button></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:0 14px 13px">
+  const showGenderFilter=(gf==="Teman Wanita"||gf==="Teman Pria");
+  const genderFilter=S.genderFilter||"Semua";
+  const countGender=g=>S.guests.filter(x=>(gf==="Semua"||x.group===gf)&&(g==="Semua"||x.gender===g)).reduce((a,x)=>a+x.count,0);
+  const filteredFinal=filtered.filter(g=>{
+    if(!showGenderFilter)return true;
+    return genderFilter==="Semua"||(g.gender||"Semua")===genderFilter;
+  });
+  return `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:0 14px 13px">
     <div class="stat-card" style="background:var(--white);border:1px solid var(--border)"><div class="stat-num">${t.totalG}</div><div class="stat-lbl" style="color:var(--gray)">${L("totalGuest")}</div></div>
     <div class="stat-card" style="background:var(--teal-light)"><div class="stat-num" style="color:var(--teal)">${t.hadir}</div><div class="stat-lbl" style="color:var(--teal)">${L("present")}</div></div>
     <div class="stat-card" style="background:var(--pink-bg)"><div class="stat-num" style="color:var(--rose)">${t.tunggu}</div><div class="stat-lbl" style="color:var(--rose)">${L("waiting")}</div></div>
   </div>
   <div style="margin:0 14px 12px"><div class="card-sm" style="display:flex;align-items:center;gap:9px"><i class="ti ti-search" style="font-size:17px;color:var(--gray);flex-shrink:0"></i><input id="guest-search-inp" style="border:none;outline:none;background:transparent;font-family:'DM Sans',sans-serif;font-size:13.5px;width:100%;color:var(--dark)" placeholder="${L("searchGuestPh")}" value="${S.guestSearch}"></div></div>
   <div class="pill-row" style="padding:0 14px 10px">${GFILTERS.map(([v,lbl])=>`<span class="pill${gf===v?" active":""}" data-guest-filter="${v}">${lbl} <span style="font-size:10px;opacity:.75">(${countF(v)})</span></span>`).join("")}</div>
-  <div id="guest-list">${filtered.map(guestCard).join("")}</div>`;
+  ${showGenderFilter?`<div style="padding:0 14px 10px"><div style="font-size:10px;font-weight:600;color:var(--gray);letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px">Filter Gender</div><div style="display:flex;gap:7px">${[["Semua","Semua"],["Pria","Pria"],["Wanita","Wanita"]].map(([v,lbl])=>`<span class="pill${genderFilter===v?" active":""}" data-gender-filter="${v}" style="display:flex;align-items:center;gap:4px">${v==="Pria"?'<i class="ti ti-man" style="font-size:12px"></i>':v==="Wanita"?'<i class="ti ti-woman" style="font-size:12px"></i>':''} ${lbl} <span style="font-size:10px;opacity:.75">(${countGender(v)})</span></span>`).join("")}</div></div>`:""}
+  <div id="guest-list">${filteredFinal.map(guestCard).join("")}</div>
+  <button class="fab" id="fab-guest"><i class="ti ti-user-plus" style="font-size:22px"></i></button>`;
 }
 
 function pgBrismedPage(){
@@ -774,10 +789,10 @@ function pgBrismedPage(){
       :sharedList.map(item=>{return`<div class="card"><div style="display:flex;align-items:flex-start;gap:10px"><div style="width:42px;height:42px;border-radius:12px;background:var(--gray-light);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${catIcon(item.cat)}" style="font-size:20px;color:var(--gray)"></i></div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="font-weight:600;font-size:14px">${item.name}</div><button class="edit-btn" data-edit-brmsi="${item.id}"><i class="ti ti-pencil" style="font-size:13px"></i></button></div><div style="font-size:12px;color:var(--gray);margin-top:2px">${item.cat}</div><div style="margin-top:5px"><span class="badge ${sCls(item.status)}" style="font-size:11px">${item.status}</span></div>${item.link?`<a href="${item.link}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--rose-dark);text-decoration:none;background:var(--pink-bg);padding:3px 9px;border-radius:20px;border:1px solid var(--rose-light);margin-top:6px"><i class="ti ti-shopping-bag" style="font-size:11px"></i>Beli di Toko</a>`:""}
 <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-light)"><span style="font-size:12px;font-weight:600;color:var(--dark)">${fmt(item.price)}</span></div>
 </div></div></div>`;}).join("") )}
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:4px 14px 0">
-    <button class="btn-primary" style="margin:0;background:linear-gradient(135deg,var(--rose-dark),var(--teal-dark))" id="fab-bridesmaid"><i class="ti ti-user-plus" style="font-size:15px"></i>Bridesmaid</button>
-    <button class="btn-primary" style="margin:0;background:linear-gradient(135deg,var(--teal-dark),var(--teal))" id="fab-brismed-ses"><i class="ti ti-package" style="font-size:15px"></i>Perlengkapan</button>
-  </div>`;
+  ${brmSubTab==="nama"
+    ?`<button class="fab" id="fab-bridesmaid"><i class="ti ti-user-plus" style="font-size:22px"></i></button>`
+    :`<button class="fab" id="fab-brismed-ses"><i class="ti ti-package" style="font-size:22px"></i></button>`
+  }`;
 }
 
 function pgTamu(){
@@ -894,6 +909,7 @@ function bindModalEvents(type,id,brmId){
   mc.querySelectorAll("[data-ses-party]").forEach(p=>{p.onclick=()=>{sesParty=p.dataset.sesParty;mc.querySelectorAll("[data-ses-party]").forEach(x=>x.classList.toggle("active",x===p));};});
   mc.querySelectorAll("[data-ses-st]").forEach(p=>{p.onclick=()=>{sesStatus=p.dataset.sesSt;mc.querySelectorAll("[data-ses-st]").forEach(x=>x.classList.toggle("active",x===p));};});
   mc.querySelectorAll("[data-g-group]").forEach(p=>{p.onclick=()=>{gGroup=p.dataset.gGroup;mc.querySelectorAll("[data-g-group]").forEach(x=>x.classList.toggle("active",x===p));};});
+  mc.querySelectorAll("[data-g-gender]").forEach(p=>{p.onclick=()=>{const hid=mc.querySelector("#m-g-gender");if(hid)hid.value=p.dataset.gGender;mc.querySelectorAll("[data-g-gender]").forEach(x=>x.classList.toggle("active",x===p));};});
   mc.querySelectorAll("[data-g-rsvp]").forEach(p=>{p.onclick=()=>{gRsvp=p.dataset.gRsvp;mc.querySelectorAll("[data-g-rsvp]").forEach(x=>x.classList.toggle("active",x===p));};});
   mc.querySelectorAll("[data-g-vip]").forEach(p=>{p.onclick=()=>{gVip=p.dataset.gVip==="true";mc.querySelectorAll("[data-g-vip]").forEach(x=>x.classList.toggle("active",x===p));};});
   const minus=mc.querySelector("#g-cnt-minus");const plus=mc.querySelector("#g-cnt-plus");const disp=mc.querySelector("#g-cnt-disp");
@@ -1212,11 +1228,18 @@ function buildGuestForm(id){
   if(ex){gGroup=ex.group;gRsvp=ex.rsvp;gCount=ex.count;gVip=ex.vip;}else{gGroup="Keluarga";gRsvp="Menunggu";gCount=1;gVip=false;}
   const isEdit=!!ex;
   const grps=[["Keluarga","Keluarga"],["Teman Wanita","Teman Wanita"],["Teman Pria","Teman Pria"],["Lainnya","Lainnya"]];
+  const genderVal=ex?(ex.gender||"Pria"):"Pria";
   return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div class="modal-title">${isEdit?L("editGuestTitle"):L("addGuestTitle")}</div><button class="hicon" id="modal-close"><i class="ti ti-x"></i></button></div>
 <span class="field-label">${L("fullName")}</span>
 <input id="m-g-name" class="input-field" placeholder="${L("fullNamePh")}" value="${ex?ex.name:""}">
 <span class="field-label">${L("groupRelation")}</span>
 <div style="display:flex;gap:7px;flex-wrap:wrap">${pillRow(grps,"data-g-group",gGroup)}</div>
+<span class="field-label">GENDER</span>
+<div style="display:flex;gap:8px;margin-bottom:4px">
+  <span class="pill${genderVal==="Pria"?" active":""}" data-g-gender="Pria" style="flex:1;text-align:center;display:flex;align-items:center;justify-content:center;gap:5px"><i class="ti ti-man" style="font-size:14px"></i> Pria</span>
+  <span class="pill${genderVal==="Wanita"?" active":""}" data-g-gender="Wanita" style="flex:1;text-align:center;display:flex;align-items:center;justify-content:center;gap:5px"><i class="ti ti-woman" style="font-size:14px"></i> Wanita</span>
+</div>
+<input type="hidden" id="m-g-gender" value="${genderVal}">
 <span class="field-label">${L("contact")}</span>
 <div style="display:flex;gap:9px;align-items:center"><i class="ti ti-mail" style="font-size:17px;color:var(--gray)"></i><input id="m-g-contact" class="input-field" placeholder="${L("contactPh")}" value="${ex?ex.contact:""}"></div>
 <span class="field-label">${L("headcount")}</span>
@@ -1241,8 +1264,9 @@ function saveGuest(id){
   if(!name){showToast(L("fillName"));return;}
   gCount=parseInt((document.getElementById("g-cnt-disp")||{}).textContent)||1;
   const contact=(document.getElementById("m-g-contact").value||"");
-  if(id){const g=S.guests.find(x=>String(x.id)===String(id));if(g)Object.assign(g,{name,group:gGroup,contact,count:gCount,vip:gVip,rsvp:gRsvp});showToast(L("guestUpdated"));addNotif("Tamu \""+name+"\" diperbarui","ti-users");}
-  else{S.guests.push({id:Date.now(),name,group:gGroup,contact,count:gCount,vip:gVip,rsvp:gRsvp});showToast(L("guestAdded"));addNotif("Tamu \""+name+"\" ditambahkan","ti-user-plus");}
+  const gender=(document.getElementById("m-g-gender")||{}).value||"Pria";
+  if(id){const g=S.guests.find(x=>String(x.id)===String(id));if(g)Object.assign(g,{name,group:gGroup,contact,count:gCount,vip:gVip,rsvp:gRsvp,gender});showToast(L("guestUpdated"));addNotif("Tamu \""+name+"\" diperbarui","ti-users");}
+  else{S.guests.push({id:Date.now(),name,group:gGroup,contact,count:gCount,vip:gVip,rsvp:gRsvp,gender});showToast(L("guestAdded"));addNotif("Tamu \""+name+"\" ditambahkan","ti-user-plus");}
   closeModal();renderPage("tamu");
 }
 
