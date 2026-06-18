@@ -235,6 +235,7 @@ const S={
 
 const CATS=[
   {id:"Tabungan",name:"Tabungan",sub:"Dana Pernikahan",icon:"ti-coins",bg:"#EEF3FB",ic:"#4A6FA5"},
+  {id:"Bonus",name:"Bonus",sub:"Dana Pernikahan",icon:"ti-rosette-discount-check",bg:"#F0F7F4",ic:"#2A7A5C"},
   {id:"Adm. Dokumen",name:"Adm. Dokumen",sub:"KUA & Legalitas",icon:"ti-file-description",bg:"#F0F7F4",ic:"#2A7A5C"},
   {id:"Prayer Set",name:"Prayer Set",sub:"Perlengkapan Ibadah",icon:"ti-book",bg:"#FEF3E2",ic:"#8B5E1A"},
   {id:"Toiletries",name:"Toiletries",sub:"Perlengkapan Mandi",icon:"ti-droplet",bg:"#EAF5FE",ic:"#1A6FA5"},
@@ -1066,24 +1067,34 @@ function delItem(type,id){
 }
 
 /* ── CAT PICKER ── */
-function openCatPicker(currentCat,cb){
+const CATS_INCOME=[
+  {id:"Tabungan",name:"Tabungan",sub:"Dana Pernikahan",icon:"ti-coins",bg:"#EEF3FB",ic:"#4A6FA5"},
+  {id:"Bonus",name:"Bonus",sub:"Dana Pernikahan",icon:"ti-rosette-discount-check",bg:"#F0F7F4",ic:"#2A7A5C"}
+];
+
+function openCatPicker(currentCat,cb,filteredCats){
+  const catList=filteredCats||CATS;
   pickerSel=currentCat||"";pickerCb=cb;
-  if(document.getElementById("cat-picker"))return;
+  if(document.getElementById("cat-picker"))document.getElementById("cat-picker").remove();
   const overlay=document.createElement("div");overlay.className="cat-picker-overlay";overlay.id="cat-picker";
   const sheet=document.createElement("div");sheet.className="cat-picker-sheet";
 
   const hdr=document.createElement("div");hdr.style.cssText="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px";
   const ttl=document.createElement("div");
-  ttl.innerHTML="<div style=\"font-size:10px;font-weight:700;color:var(--teal);letter-spacing:.8px;text-transform:uppercase;display:flex;align-items:center;gap:6px\"><i class=\"ti ti-layout-grid-add\" style=\"font-size:14px\"></i>"+L("pickCategory")+"</div><div style=\"font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;color:var(--dark);margin-top:2px\">"+L("pickCategory")+"</div><div style=\"font-size:12.5px;color:var(--gray);margin-top:2px\">"+L("pickCategorySub")+"</div>";
+  const isIncome=filteredCats===CATS_INCOME;
+  const titleLabel=isIncome?"Pilih Sumber Pemasukan":L("pickCategory");
+  const subLabel=isIncome?"Semua sumber dana pernikahan Anda":L("pickCategorySub");
+  ttl.innerHTML="<div style=\"font-size:10px;font-weight:700;color:var(--teal);letter-spacing:.8px;text-transform:uppercase;display:flex;align-items:center;gap:6px\"><i class=\"ti "+(isIncome?"ti-arrow-down-circle":"ti-layout-grid-add")+"\" style=\"font-size:14px\"></i>"+(isIncome?"PEMASUKAN":L("pickCategory"))+"</div><div style=\"font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;color:var(--dark);margin-top:2px\">"+titleLabel+"</div><div style=\"font-size:12.5px;color:var(--gray);margin-top:2px\">"+subLabel+"</div>";
   const xBtn=document.createElement("button");xBtn.className="hicon";xBtn.innerHTML="<i class=\"ti ti-x\"></i>";xBtn.onclick=()=>overlay.remove();
   hdr.appendChild(ttl);hdr.appendChild(xBtn);
 
-  const grid=document.createElement("div");grid.className="cat-grid";
+  const grid=document.createElement("div");grid.className="cat-grid"+(isIncome?" cat-grid-income":"");
   const lbl=document.createElement("div");lbl.style.cssText="text-align:center;font-size:10.5px;color:var(--gray);letter-spacing:.5px;text-transform:uppercase;margin-top:8px";lbl.textContent=pickerSel?pickerSel.toUpperCase():L("noneSelected");
 
-  CATS.forEach(c=>{
+  catList.forEach(c=>{
     const card=document.createElement("div");card.className="cat-card"+(pickerSel===c.id?" selected":"");
-    card.innerHTML="<div class=\"cat-icon-wrap\" style=\"background:"+c.bg+"\"><i class=\"ti "+c.icon+"\" style=\"color:"+c.ic+"\"></i></div><div><div class=\"cat-name\">"+c.name+"</div><div class=\"cat-sub\">"+c.sub+"</div></div>";
+    if(isIncome)card.style.cssText="flex-direction:row;align-items:center;gap:14px;padding:16px;";
+    card.innerHTML="<div class=\"cat-icon-wrap\" style=\"background:"+c.bg+"\"><i class=\"ti "+c.icon+"\" style=\"color:"+c.ic+"\"></i></div><div><div class=\"cat-name\">"+c.name+"</div><div class=\"cat-sub\" style=\"font-size:11px;color:var(--gray);font-weight:500\">"+c.sub+"</div></div>";
     card.onclick=()=>{pickerSel=c.id;grid.querySelectorAll(".cat-card").forEach(x=>x.classList.remove("selected"));card.classList.add("selected");lbl.textContent=c.id.toUpperCase();};
     grid.appendChild(card);
   });
@@ -1124,7 +1135,10 @@ function buildTxForm(id){
   if(ex){txType=ex.type;txStatus=ex.status||"Belum Dibayar";}else{txType="out";txStatus="Belum Dibayar";}
   if(!id)txPaySel=null;
   const isEdit=!!ex;
-  const payStatuses=[["Belum Dibayar",L("notUnpaid")],["DP",L("dp")],["Lunas",L("paid")],["Tabungan","Tabungan"]];
+  const payStatuses=txType==="in"
+    ?[["Tabungan Bulanan","Tabungan Bulanan"],["Bonus THR","Bonus THR"]]
+    :[["Belum Dibayar",L("notUnpaid")],["DP",L("dp")],["Lunas",L("paid")]];
+  if(txType==="in"&&!["Tabungan Bulanan","Bonus THR"].includes(txStatus))txStatus="Tabungan Bulanan";
   const budItems=getBudgetItems();
   const selItem=txPaySel?budItems.find(b=>b.id===txPaySel):null;
   const payStatBayar=ex&&ex.type==="pay"?(ex.payStatus||"DP"):"DP";
@@ -1181,8 +1195,8 @@ ${txType==="pay"?payForm:`
 <span class="field-label">${L("nominal")}</span>
 <div class="money-wrap"><span class="money-pfx">Rp</span><input id="m-tx-amt" class="money-input" inputmode="numeric" placeholder="0" value="${ex&&ex.type!=="pay"?fmtN(ex.amount):""}"></div>
 <span class="field-label">${L("itemName")}</span>
-<input id="m-tx-name" class="input-field" placeholder="Contoh: DP Gedung" value="${ex&&ex.type!=="pay"?ex.name:""}">
-<span class="field-label">${L("category")}</span>${catTriggerHTML("tx",ex&&ex.type!=="pay"?ex.cat:"")}
+<input id="m-tx-name" class="input-field" placeholder="${txType==="in"?"Nama Catin":"Contoh: DP Gedung"}" value="${ex&&ex.type!=="pay"?ex.name:""}">
+<span class="field-label">${txType==="in"?"SUMBER PEMASUKAN":L("category")}</span>${catTriggerHTML("tx",ex&&ex.type!=="pay"?ex.cat:"")}
 <span class="field-label">${L("paymentStatus")}</span>
 <div style="display:flex;gap:8px;flex-wrap:wrap">${pillRow(payStatuses,"data-tx-st",txStatus)}</div>
 <span class="field-label">${L("notes")}</span>
@@ -1216,7 +1230,10 @@ function switchTxType(type){
   const mc=document.getElementById("modal-content");if(!mc)return;
   mc.querySelectorAll("[data-tx-type]").forEach(p=>p.classList.toggle("active",p.dataset.txType===type));
   const body=document.getElementById("tx-form-body");if(!body)return;
-  const payStatuses=[["Belum Dibayar",L("notUnpaid")],["DP",L("dp")],["Lunas",L("paid")],["Tabungan","Tabungan"]];
+  const payStatuses=type==="in"
+    ?[["Tabungan Bulanan","Tabungan Bulanan"],["Bonus THR","Bonus THR"]]
+    :[["Belum Dibayar",L("notUnpaid")],["DP",L("dp")],["Lunas",L("paid")]];
+  if(type==="in")txStatus="Tabungan Bulanan";
   const budItems=getBudgetItems();
   const selItem=txPaySel?budItems.find(b=>b.id===txPaySel):null;
   if(type==="pay"){
@@ -1268,15 +1285,15 @@ function switchTxType(type){
 <span class="field-label">${L("nominal")}</span>
 <div class="money-wrap"><span class="money-pfx">Rp</span><input id="m-tx-amt" class="money-input" inputmode="numeric" placeholder="0"></div>
 <span class="field-label">${L("itemName")}</span>
-<input id="m-tx-name" class="input-field" placeholder="Contoh: DP Gedung">
-<span class="field-label">${L("category")}</span>${catTriggerHTML("tx","")}
+<input id="m-tx-name" class="input-field" placeholder="${type==="in"?"Nama Catin":"Contoh: DP Gedung"}">
+<span class="field-label">${type==="in"?"SUMBER PEMASUKAN":L("category")}</span>${catTriggerHTML("tx",type==="in"?"":"")}
 <span class="field-label">${L("paymentStatus")}</span>
-<div style="display:flex;gap:8px;flex-wrap:wrap">${pillRow(payStatuses,"data-tx-st","Belum Dibayar")}</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap">${pillRow(payStatuses,"data-tx-st",type==="in"?"Tabungan Bulanan":"Belum Dibayar")}</div>
 <span class="field-label">${L("notes")}</span>
 <input id="m-tx-notes" class="input-field" placeholder="${L("notesPh")}">
 <button class="btn-primary" data-save="tx"><i class="ti ti-device-floppy" style="font-size:15px"></i>${L("saveBudget")}</button>`;
     bindMoney("m-tx-amt");
-    mc.querySelectorAll("[data-cat-ctx]").forEach(btn=>{btn.onclick=()=>{const ctx=btn.dataset.catCtx;const hid=document.getElementById("cat-hid-"+ctx);openCatPicker(hid?hid.value:"",v=>{if(hid)hid.value=v;updateCatTrigger(ctx,v);});};});
+    mc.querySelectorAll("[data-cat-ctx]").forEach(btn=>{btn.onclick=()=>{const ctx=btn.dataset.catCtx;const hid=document.getElementById("cat-hid-"+ctx);const useIncome=ctx==="tx"&&txType==="in";openCatPicker(hid?hid.value:"",v=>{if(hid)hid.value=v;updateCatTrigger(ctx,v);},useIncome?CATS_INCOME:undefined);};});
     mc.querySelectorAll("[data-tx-st]").forEach(p=>{p.onclick=()=>{txStatus=p.dataset.txSt;mc.querySelectorAll("[data-tx-st]").forEach(x=>x.classList.toggle("active",x===p));};});
     const savBtn=mc.querySelector("[data-save]");if(savBtn)savBtn.onclick=()=>saveTx(null);
   }
