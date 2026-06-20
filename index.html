@@ -2083,7 +2083,7 @@ async function loadFromRTDB(){
     const d=snap.val();
     /* Meta/settings & notif TIDAK diload dari RTDB — hanya dari Firestore */
     /* collections */
-    const cols=["transactions","seserahan","guests","documents","vendors","brismed","brismedItems"];
+    const cols=["transactions","seserahan","guests","documents","vendors","brismed","brismedItems","persiapan"];
     cols.forEach(col=>{
       if(d[col]){
         const items=Object.values(d[col]).map(it=>{const c={...it};delete c._t;return c;});
@@ -2106,6 +2106,7 @@ async function loadFromFirestore(){
       if(d.income!=null)S.income=d.income;
       if(d.lang)S.lang=d.lang;
       if(d.darkMode!=null)S.darkMode=d.darkMode;
+      if(d.themeId)S.themeId=d.themeId;
       if(d.profilePhoto)S.profilePhoto=d.profilePhoto;
       if(d.coverPhoto)S.coverPhoto=d.coverPhoto;
     }
@@ -2129,7 +2130,7 @@ function startRTDBListener(){
     const d=snap.val();
     let changed=false;
     /* Update collections if remote is newer */
-    const cols=["transactions","seserahan","guests","documents","vendors","brismed","brismedItems"];
+    const cols=["transactions","seserahan","guests","documents","vendors","brismed","brismedItems","persiapan"];
     cols.forEach(col=>{
       if(d[col]){
         const items=Object.values(d[col]).map(it=>{const c={...it};delete c._t;return c;});
@@ -2174,7 +2175,11 @@ async function syncBrismedItem(id){
   const t=id?(S.brismedItems||[]).find(x=>String(x.id)===String(id)):(S.brismedItems||[])[S.brismedItems.length-1];
   if(t)await fbSave("brismedItems",t);
 }
-async function syncSettings(){await fbSaveMeta("settings",{couple:S.couple,income:S.income,lang:S.lang,darkMode:S.darkMode,profilePhoto:"Foto_Profil.jpeg"||null,coverPhoto:"Cover_Profil.jpeg"||null});}
+async function syncPersiapan(id){
+  const t=id?(S.persiapan||[]).find(x=>String(x.id)===String(id)):(S.persiapan||[])[(S.persiapan||[]).length-1];
+  if(t)await fbSave("persiapan",t);
+}
+async function syncSettings(){await fbSaveMeta("settings",{couple:S.couple,income:S.income,lang:S.lang,darkMode:S.darkMode,themeId:S.themeId||"rosegold",profilePhoto:"Foto_Profil.jpeg"||null,coverPhoto:"Cover_Profil.jpeg"||null});}
 async function syncNotif(){await fbSaveMeta("notif",{...S.notif});}
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -2432,10 +2437,24 @@ document.addEventListener("click",function(e){
     var syncId=id||(S.brismedItems||[])[(S.brismedItems||[]).length-1].id;
     syncBrismedItem(syncId);
   };
+  /* --- savePersiapan --- */
+  var _sPers=savePersiapan;
+  savePersiapan=function(id){
+    _sPers(id);
+    var syncId=id||(S.persiapan||[])[(S.persiapan||[]).length-1].id;
+    syncPersiapan(syncId);
+  };
+  /* --- requestPushPermission (auto-grant on launch) --- */
+  var _rPP=requestPushPermission;
+  requestPushPermission=async function(){
+    var before=S.notif.pushOn;
+    await _rPP();
+    if(S.notif.pushOn!==before&&_uid)syncNotif();
+  };
   /* --- delItem --- */
   var _del=delItem;
   delItem=function(type,id){
-    const map={tx:"transactions",ses:"seserahan",guest:"guests",doc:"documents",vendor:"vendors",brismed:"brismed","brismed-shared-item":"brismedItems"};
+    const map={tx:"transactions",ses:"seserahan",guest:"guests",doc:"documents",pers:"persiapan",vendor:"vendors",brismed:"brismed","brismed-shared-item":"brismedItems"};
     if(!confirm(L("itemDeleted")+"?"))return;
     if(type==="brismed"){if(S.brismed)S.brismed=S.brismed.filter(x=>String(x.id)!==String(id));syncBrismedBudget();closeModal();renderPage(curTab);showToast(L("itemDeleted"));addNotif("Item berhasil dihapus","ti-trash");fbDelete("brismed",id);return;}
     if(type==="brismed-shared-item"){if(S.brismedItems)S.brismedItems=S.brismedItems.filter(x=>String(x.id)!==String(id));closeModal();renderPage(curTab);showToast(L("itemDeleted"));addNotif("Item berhasil dihapus","ti-trash");fbDelete("brismedItems",id);return;}
@@ -2466,11 +2485,26 @@ document.addEventListener("click",function(e){
     _iSE(sub);
     var sp=document.getElementById("subpage-container");
     if(!sp)return;
-    /* Notif toggles */
+    /* Push notif toggle (single on/off) */
     if(sub==="notif"){
-      sp.querySelectorAll(".toggle-sw[data-notif-key]").forEach(function(sw){
-        var prev=sw.onclick;
-        sw.onclick=function(){if(prev)prev.call(this);syncNotif();};
+      var pushBtn=sp.querySelector("#btn-push-toggle");
+      if(pushBtn){
+        var prevPush=pushBtn.onclick;
+        pushBtn.onclick=function(){
+          var r=prevPush?prevPush.call(this):null;
+          if(r&&typeof r.then==="function"){r.then(function(){syncNotif();});}
+          else{syncNotif();}
+        };
+      }
+    }
+    /* Theme card selection sync */
+    if(sub==="theme"){
+      sp.querySelectorAll("[data-theme-id]").forEach(function(card){
+        var prevT=card.onclick;
+        card.onclick=function(){
+          if(prevT)prevT.call(this);
+          syncSettings();
+        };
       });
     }
     /* Profile photo */
