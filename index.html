@@ -138,6 +138,8 @@ textarea.input-field:focus{border-color:var(--teal)}
 .lang-option{display:flex;align-items:center;gap:14px;padding:14px 12px;border-radius:14px;cursor:pointer;border:2px solid var(--border);margin-bottom:10px;transition:all .2s}
 .lang-option:last-child{margin-bottom:0}
 .lang-option.active,.lang-option:hover{border-color:var(--teal);background:var(--teal-light)}
+.theme-card:hover{transform:translateY(-2px)}
+.theme-card.active{box-shadow:0 4px 14px rgba(0,0,0,.12)}
 .lang-flag{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px}
 .notif-dot{position:absolute;top:5px;right:5px;width:8px;height:8px;background:var(--danger);border-radius:50%;border:1.5px solid var(--white)}
 #btn-notif{position:relative}
@@ -221,7 +223,7 @@ const S={
     {id:4,name:"Aura Jewelry",cat:"Mahar",desc:"Cincin Pernikahan Custom",phone:"0877-8888-9999",email:"aura@jewelry.id",cost:35000000,ok:true,photo:null,notes:""}
   ],
   notif:{pushOn:false},
-  darkMode:false,lang:"id",
+  darkMode:false,lang:"id",themeId:"rosegold",
   budFilter:"semua",sesFilter:"Semua",guestSearch:"",guestFilter:"Semua",vendSearch:"",
   tamuTab:"tamu",
   brmSubTab:"nama",
@@ -489,6 +491,7 @@ function getBudgetWarning(budget,paid){
 function applyDark(){
   document.body.classList.toggle("dark",S.darkMode);
   document.getElementById("app-root").classList.toggle("dark",S.darkMode);
+  applyTheme();
   renderPage(curTab);
 }
 function applyLang(){
@@ -1100,6 +1103,49 @@ const CATS_INCOME=[
   {id:"Bonus",name:"Bonus",sub:"Dana Pernikahan",icon:"ti-rosette-discount-check",bg:"#F0F7F4",ic:"#2A7A5C"}
 ];
 
+/* ── Theme Presets (gradient color pairs, light + dark variants) ── */
+const THEMES=[
+  {id:"rosegold",name:"Rose Gold",sub:"Default",
+    light:{rose:"#7D3C52",roseLight:"#F5D6E3",roseDark:"#5C2A3C",roseMid:"#C0637D",teal:"#3D7A6E",tealLight:"#E2F5F0",tealDark:"#2A5C52",pinkBg:"#FDE8F2",pinkCard:"#F9EEF4"},
+    dark:{rose:"#E89AB4",roseLight:"#3A1828",roseDark:"#5C2A3C",roseMid:"#C0637D",teal:"#5FCBB7",tealLight:"#0E2018",tealDark:"#2A5C52",pinkBg:"#2E1820",pinkCard:"#281618"}},
+  {id:"lavender",name:"Lavender Mist",sub:"Ungu Lembut",
+    light:{rose:"#6B4C8C",roseLight:"#E8DCF5",roseDark:"#4A3265",roseMid:"#9B7BBE",teal:"#3D7A8C",tealLight:"#DCF0F5",tealDark:"#2A5566",pinkBg:"#F2E8FC",pinkCard:"#EEE4F8"},
+    dark:{rose:"#C4A3E8",roseLight:"#2A1E3D",roseDark:"#4A3265",roseMid:"#9B7BBE",teal:"#6FC2D6",tealLight:"#0F2228",teal2:"#2A5566",tealDark:"#2A5566",pinkBg:"#251A33",pinkCard:"#20162C"}},
+  {id:"sage",name:"Sage Garden",sub:"Hijau Sage",
+    light:{rose:"#5C7A4A",roseLight:"#E2EDD9",roseDark:"#3E5630",roseMid:"#88A872",teal:"#7A6A3D",tealLight:"#F5EFDC",tealDark:"#5C4F2A",pinkBg:"#EDF3E4",pinkCard:"#E6EFDB"},
+    dark:{rose:"#A8D188",roseLight:"#1E2A18",roseDark:"#3E5630",roseMid:"#88A872",teal:"#D4BC6F",tealLight:"#28220E",tealDark:"#5C4F2A",pinkBg:"#1A2415",pinkCard:"#161E12"}},
+  {id:"sunset",name:"Sunset Blush",sub:"Oranye Hangat",
+    light:{rose:"#A8512C",roseLight:"#FBE2D2",roseDark:"#7A3A1F",roseMid:"#D88555",teal:"#3D7A6E",tealLight:"#E2F5F0",tealDark:"#2A5C52",pinkBg:"#FDEFE4",pinkCard:"#F9E8DA"},
+    dark:{rose:"#F0985F",roseLight:"#34200F",roseDark:"#7A3A1F",roseMid:"#D88555",teal:"#5FCBB7",tealLight:"#0E2018",tealDark:"#2A5C52",pinkBg:"#2E1E10",pinkCard:"#28190C"}},
+  {id:"oceanic",name:"Oceanic Teal",sub:"Biru Laut",
+    light:{rose:"#2A5C7A",roseLight:"#DCEAF5",roseDark:"#1C405A",roseMid:"#5C92B0",teal:"#3D9C7A",tealLight:"#DDF2E8",tealDark:"#2A6E54",pinkBg:"#E4F0F8",pinkCard:"#DCEAF4"},
+    dark:{rose:"#7FC0E8",roseLight:"#16242E",roseDark:"#1C405A",roseMid:"#5C92B0",teal:"#6FD9AE",tealLight:"#0E241A",tealDark:"#2A6E54",pinkBg:"#10222C",pinkCard:"#0C1C24"}},
+  {id:"burgundy",name:"Burgundy Wine",sub:"Merah Anggur",
+    light:{rose:"#7A1F33",roseLight:"#F2D6DC",roseDark:"#52121F",roseMid:"#B0526A",teal:"#5C5430",tealLight:"#F0EDDC",tealDark:"#403A20",pinkBg:"#F8E2E8",pinkCard:"#F2D8E0"},
+    dark:{rose:"#E86A88",roseLight:"#2E141C",roseDark:"#52121F",roseMid:"#B0526A",teal:"#C9BD7F",tealLight:"#241F0E",tealDark:"#403A20",pinkBg:"#2A1218",pinkCard:"#220E14"}},
+  {id:"midnight",name:"Midnight Plum",sub:"Ungu Tua Elegan",
+    light:{rose:"#4A2C5C",roseLight:"#E4DCF0",roseDark:"#321C40",roseMid:"#7C5C94",teal:"#2C4A5C",tealLight:"#DCE8F0",tealDark:"#1C3240",pinkBg:"#EAE2F5",pinkCard:"#E2D8F0"},
+    dark:{rose:"#B894D6",roseLight:"#221830",roseDark:"#321C40",roseMid:"#7C5C94",teal:"#7FAAC4",tealLight:"#101E28",tealDark:"#1C3240",pinkBg:"#1E1428",pinkCard:"#180F20"}},
+  {id:"coral",name:"Coral Reef",sub:"Pink Karang",
+    light:{rose:"#C0456A",roseLight:"#FBDCE6",roseDark:"#8A2E4A",roseMid:"#E07E98",teal:"#2C8C7A",tealLight:"#DCF2EC",tealDark:"#1E6055",pinkBg:"#FDE4ED",pinkCard:"#FADAE6"},
+    dark:{rose:"#F08CA8",roseLight:"#321822",roseDark:"#8A2E4A",roseMid:"#E07E98",teal:"#5FD4BA",tealLight:"#0E261F",tealDark:"#1E6055",pinkBg:"#2C1620",pinkCard:"#24121A"}}
+];
+function applyTheme(){
+  const themeId=S.themeId||"rosegold";
+  const theme=THEMES.find(t=>t.id===themeId)||THEMES[0];
+  const vars=S.darkMode?theme.dark:theme.light;
+  const root=document.documentElement;
+  root.style.setProperty("--rose",vars.rose);
+  root.style.setProperty("--rose-light",vars.roseLight);
+  root.style.setProperty("--rose-dark",vars.roseDark);
+  root.style.setProperty("--rose-mid",vars.roseMid);
+  root.style.setProperty("--teal",vars.teal);
+  root.style.setProperty("--teal-light",vars.tealLight);
+  root.style.setProperty("--teal-dark",vars.tealDark);
+  root.style.setProperty("--pink-bg",vars.pinkBg);
+  root.style.setProperty("--pink-card",vars.pinkCard);
+}
+
 function openCatPicker(currentCat,cb,filteredCats){
   const catList=filteredCats||CATS;
   pickerSel=currentCat||"";pickerCb=cb;
@@ -1673,7 +1719,7 @@ function syncBrismedBudget(){
 function openSub(sub){
   const sp=document.getElementById("subpage-container");
   sp.classList.add("open");
-  const pages={main:subMain,detail:subDetail,security:subSecurity,notif:subNotif,bantuan:subBantuan};
+  const pages={main:subMain,detail:subDetail,security:subSecurity,notif:subNotif,bantuan:subBantuan,theme:subTheme};
   sp.innerHTML=pages[sub]?pages[sub]():"";
   initSubEvents(sub);
 }
@@ -1774,6 +1820,16 @@ function initSubEvents(sub){
       openSub("notif");
     };
   }
+  if(sub==="theme"){
+    sp.querySelectorAll("[data-theme-id]").forEach(card=>{
+      card.onclick=()=>{
+        S.themeId=card.dataset.themeId;
+        applyTheme();
+        openSub("theme");
+        showToast("🎨 Tema warna diubah ke "+(THEMES.find(t=>t.id===S.themeId)||{}).name);
+      };
+    });
+  }
   if(sub==="bantuan"){
     sp.querySelectorAll("[data-help-item]").forEach(el=>el.onclick=()=>showToast(el.dataset.helpItem));
     const wa=sp.querySelector("#btn-wa");if(wa)wa.onclick=()=>showToast(L("chatAdmin"));
@@ -1807,6 +1863,7 @@ function subMain(){
     <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;margin-bottom:14px">${L("settings")}</div>
     <div class="setting-row" style="cursor:default"><div class="setting-icon" style="background:#E8EDF5"><i class="ti ti-moon" style="color:#4A6FA5"></i></div><div style="flex:1"><div style="font-size:14px;font-weight:500">${L("darkMode")}</div></div><button class="toggle-sw" id="dm-toggle" style="background:${S.darkMode?"var(--teal)":"var(--border)"}"><div class="knob" style="left:${S.darkMode?"23px":"3px"}"></div></button></div>
     <div class="setting-row" data-sub="detail"><div class="setting-icon" style="background:var(--pink-bg)"><i class="ti ti-heart" style="color:var(--rose)"></i></div><div style="flex:1"><div style="font-size:14px;font-weight:500">${L("weddingDetail")}</div><div style="font-size:12px;color:var(--gray)">${S.couple.venue}</div></div><i class="ti ti-chevron-right" style="color:var(--gray);font-size:16px"></i></div>
+    <div class="setting-row" data-sub="theme"><div class="setting-icon" style="background:linear-gradient(135deg,var(--rose),var(--teal))"><i class="ti ti-palette" style="color:#fff"></i></div><div style="flex:1"><div style="font-size:14px;font-weight:500">Tema Warna</div><div style="font-size:12px;color:var(--gray)">${(THEMES.find(t=>t.id===(S.themeId||"rosegold"))||THEMES[0]).name}</div></div><i class="ti ti-chevron-right" style="color:var(--gray);font-size:16px"></i></div>
     <div class="setting-row" data-sub="security"><div class="setting-icon" style="background:var(--teal-light)"><i class="ti ti-shield-check" style="color:var(--teal)"></i></div><div style="flex:1"><div style="font-size:14px;font-weight:500">${L("accountSecurity")}</div></div><i class="ti ti-chevron-right" style="color:var(--gray);font-size:16px"></i></div>
     <div class="setting-row" id="lang-btn"><div class="setting-icon" style="background:var(--gray-light)"><i class="ti ti-world" style="color:var(--gray)"></i></div><div style="flex:1"><div style="font-size:14px;font-weight:500">${L("language")}</div><div style="font-size:12px;color:var(--gray)">${S.lang==="id"?"Bahasa Indonesia":"English"}</div></div><i class="ti ti-chevron-right" style="color:var(--gray);font-size:16px"></i></div>
     <div class="setting-row" data-sub="notif"><div class="setting-icon" style="background:var(--amber-bg)"><i class="ti ti-bell" style="color:var(--amber)"></i></div><div style="flex:1"><div style="font-size:14px;font-weight:500">${L("notifications")}</div></div><i class="ti ti-chevron-right" style="color:var(--gray);font-size:16px"></i></div>
@@ -1894,6 +1951,33 @@ function subNotif(){
       ${statusHTML}
       ${toggleHTML}
     </div>
+  </div>`;
+}
+
+function subTheme(){
+  const curId=S.themeId||"rosegold";
+  const mode=S.darkMode?"dark":"light";
+  return `<div class="back-header"><button class="back-btn" data-sub-back="main"><i class="ti ti-arrow-left" style="font-size:16px"></i></button><span style="font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:700;color:var(--rose)">Tema Warna</span></div>
+  <div style="padding:14px 18px 4px;font-size:13px;color:var(--gray)">Pilih palet warna yang sesuai selera Anda. Tema otomatis menyesuaikan saat Mode Gelap diaktifkan.</div>
+  <div style="padding:14px 18px 10px;display:flex;align-items:center;gap:8px">
+    <i class="ti ${S.darkMode?"ti-moon":"ti-sun"}" style="font-size:15px;color:var(--gray)"></i>
+    <span style="font-size:12px;color:var(--gray);font-weight:600">Pratinjau saat ini: ${S.darkMode?"Mode Gelap":"Mode Terang"}</span>
+  </div>
+  <div style="padding:0 18px 28px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    ${THEMES.map(th=>{
+      const v=th[mode];
+      const active=th.id===curId;
+      return `<div class="theme-card${active?" active":""}" data-theme-id="${th.id}" style="border-radius:16px;border:2px solid ${active?v.rose:"var(--border)"};padding:12px;cursor:pointer;background:var(--white);position:relative;transition:transform .15s">
+        ${active?`<div style="position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:50%;background:${v.rose};display:flex;align-items:center;justify-content:center"><i class="ti ti-check" style="font-size:12px;color:#fff"></i></div>`:""}
+        <div style="height:46px;border-radius:11px;background:linear-gradient(135deg,${v.rose},${v.teal});margin-bottom:9px;box-shadow:0 3px 10px ${v.rose}40"></div>
+        <div style="display:flex;gap:5px;margin-bottom:8px">
+          <div style="flex:1;height:8px;border-radius:4px;background:${v.roseLight}"></div>
+          <div style="flex:1;height:8px;border-radius:4px;background:${v.tealLight}"></div>
+        </div>
+        <div style="font-size:12.5px;font-weight:700;color:var(--dark)">${th.name}</div>
+        <div style="font-size:10.5px;color:var(--gray);margin-top:1px">${th.sub}</div>
+      </div>`;
+    }).join("")}
   </div>`;
 }
 
