@@ -220,7 +220,7 @@ const S={
     {id:3,name:"Evergreen Florals",cat:"Dekorasi",desc:"Rangkaian Bunga Segar",phone:"0811-1234-5678",email:"hello@evergreen.id",cost:15000000,ok:true,photo:null,notes:""},
     {id:4,name:"Aura Jewelry",cat:"Mahar",desc:"Cincin Pernikahan Custom",phone:"0877-8888-9999",email:"aura@jewelry.id",cost:35000000,ok:true,photo:null,notes:""}
   ],
-  notif:{budgEmail:true,budgPush:true,rsvpEmail:true,rsvpPush:true,docEmail:true,docPush:false,vendEmail:false,vendPush:false},
+  notif:{pushOn:false},
   darkMode:false,lang:"id",
   budFilter:"semua",sesFilter:"Semua",guestSearch:"",guestFilter:"Semua",vendSearch:"",
   tamuTab:"tamu",
@@ -318,14 +318,14 @@ async function requestPushPermission(){
   if(!("Notification" in window))return;
   if(Notification.permission==="default"){
     const result=await Notification.requestPermission();
-    if(result==="granted")showToast("🔔 Notifikasi push diaktifkan!");
+    if(result==="granted"){S.notif.pushOn=true;showToast("🔔 Notifikasi push diaktifkan!");}
   }
 }
 function sendPushNotif(title,body,icon){
+  if(!S.notif||!S.notif.pushOn)return;
   if(!("Notification" in window)||Notification.permission!=="granted")return;
-  if(document.visibilityState==="visible")return; // skip if app is open & visible
   try{
-    new Notification(title,{body:body||"",icon:icon||"maNTapps_MobileWedding_android.PNG",badge:"maNTapps_MobileWedding_android.PNG",tag:"wedding-planner"});
+    new Notification(title,{body:body||"",icon:icon||"maNTapps_MobileWedding_android.PNG",badge:"maNTapps_MobileWedding_android.PNG",tag:"wedding-planner-"+Date.now()});
   }catch(e){}
 }
 
@@ -671,6 +671,34 @@ function pgRingkasan(){
       ${saldo<0?`<div style="background:var(--danger-bg);padding:6px 10px;border-radius:8px;display:inline-flex;align-items:center;gap:4px"><i class="ti ti-alert-triangle" style="font-size:12px;color:var(--danger)"></i><span style="font-size:11px;font-weight:700;color:var(--danger)">Melebihi anggaran</span></div>`:""}
     </div>
   </div>
+  ${(()=>{
+    /* Total estimasi/anggaran = sum of all budget item prices (seserahan + perlengkapan + vendor + persiapan) */
+    const budItems=getBudgetItems();
+    const totalEstimasi=budItems.reduce((a,b)=>a+(b.price||0),0);
+    const pctEstimasi=allIn>0?Math.min(100,Math.round(totalEstimasi/allIn*100)):0;
+    const circ2=2*Math.PI*40;
+    const dashEst=Math.min(1,totalEstimasi/Math.max(allIn,1))*circ2;
+    const estColor=pctEstimasi>100?"var(--danger)":pctEstimasi>80?"var(--amber)":"var(--teal)";
+    /* Total pengeluaran aktual = all 'out'+'pay' transactions */
+    const totalAktual=allOut;
+    const pctAktual=allIn>0?Math.min(100,Math.round(totalAktual/allIn*100)):0;
+    const dashAkt=Math.min(1,totalAktual/Math.max(allIn,1))*circ2;
+    const aktColor=pctAktual>100?"var(--danger)":pctAktual>80?"var(--amber)":"var(--rose)";
+    return`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="card" style="padding:16px 12px;text-align:center">
+        <div style="font-weight:600;font-size:12.5px;color:var(--dark);margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:5px"><i class="ti ti-chart-donut" style="font-size:15px;color:var(--teal)"></i>Estimasi vs Pemasukan</div>
+        <svg width="100" height="100" viewBox="0 0 100 100" style="margin:0 auto;display:block"><circle cx="50" cy="50" r="40" fill="none" stroke="var(--gray-light)" stroke-width="11"/><circle cx="50" cy="50" r="40" fill="none" stroke="${estColor}" stroke-width="11" stroke-dasharray="${dashEst.toFixed(1)} ${circ2.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 50 50)"/><text x="50" y="46" text-anchor="middle" font-size="19" font-weight="700" fill="${estColor}" font-family="DM Sans,sans-serif">${pctEstimasi}%</text><text x="50" y="61" text-anchor="middle" font-size="8" fill="var(--gray)" font-family="DM Sans,sans-serif">dari pemasukan</text></svg>
+        <div style="margin-top:8px;font-size:11px;color:var(--gray)">Estimasi: <span style="font-weight:700;color:var(--dark)">${fmt(totalEstimasi)}</span></div>
+        ${pctEstimasi>100?`<div style="margin-top:4px;font-size:10px;font-weight:700;color:var(--danger)">Melebihi pemasukan</div>`:""}
+      </div>
+      <div class="card" style="padding:16px 12px;text-align:center">
+        <div style="font-weight:600;font-size:12.5px;color:var(--dark);margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:5px"><i class="ti ti-chart-donut-2" style="font-size:15px;color:var(--rose)"></i>Aktual vs Pemasukan</div>
+        <svg width="100" height="100" viewBox="0 0 100 100" style="margin:0 auto;display:block"><circle cx="50" cy="50" r="40" fill="none" stroke="var(--gray-light)" stroke-width="11"/><circle cx="50" cy="50" r="40" fill="none" stroke="${aktColor}" stroke-width="11" stroke-dasharray="${dashAkt.toFixed(1)} ${circ2.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 50 50)"/><text x="50" y="46" text-anchor="middle" font-size="19" font-weight="700" fill="${aktColor}" font-family="DM Sans,sans-serif">${pctAktual}%</text><text x="50" y="61" text-anchor="middle" font-size="8" fill="var(--gray)" font-family="DM Sans,sans-serif">dari pemasukan</text></svg>
+        <div style="margin-top:8px;font-size:11px;color:var(--gray)">Aktual: <span style="font-weight:700;color:var(--dark)">${fmt(totalAktual)}</span></div>
+        ${pctAktual>100?`<div style="margin-top:4px;font-size:10px;font-weight:700;color:var(--danger)">Melebihi pemasukan</div>`:""}
+      </div>
+    </div>`;
+  })()}
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:11px"><span style="font-weight:600;font-size:15px">${L("documents")}</span><i class="ti ti-file-check" style="font-size:20px;color:var(--gray)"></i></div>
     <div style="font-family:'Cormorant Garamond',serif;font-size:52px;font-weight:700;color:var(--rose);line-height:1">${t.docPct}<span style="font-size:24px">%</span></div>
@@ -1730,9 +1758,21 @@ function initSubEvents(sub){
     });
   }
   if(sub==="notif"){
-    sp.querySelectorAll(".toggle-sw[data-notif-key]").forEach(sw=>sw.onclick=function(){const k=this.dataset.notifKey;S.notif[k]=!S.notif[k];this.style.background=S.notif[k]?"var(--rose)":"var(--border)";this.querySelector(".knob").style.left=S.notif[k]?"23px":"3px";});
-    const reqBtn=sp.querySelector("#btn-req-push");
-    if(reqBtn)reqBtn.onclick=async()=>{await requestPushPermission();openSub("notif");};
+    const toggleBtn=sp.querySelector("#btn-push-toggle");
+    if(toggleBtn)toggleBtn.onclick=async()=>{
+      if(!("Notification" in window)){showToast("Browser tidak mendukung notifikasi");return;}
+      if(!S.notif.pushOn){
+        if(Notification.permission==="default"){
+          const result=await Notification.requestPermission();
+          if(result!=="granted"){showToast("Izin notifikasi ditolak");openSub("notif");return;}
+        }
+        if(Notification.permission!=="granted"){showToast("Izin notifikasi diblokir");openSub("notif");return;}
+        S.notif.pushOn=true;showToast("🔔 Notifikasi push diaktifkan!");
+      }else{
+        S.notif.pushOn=false;showToast("Notifikasi push dinonaktifkan");
+      }
+      openSub("notif");
+    };
   }
   if(sub==="bantuan"){
     sp.querySelectorAll("[data-help-item]").forEach(el=>el.onclick=()=>showToast(el.dataset.helpItem));
@@ -1832,24 +1872,29 @@ function subSecurity(){
 }
 
 function subNotif(){
-  const secs=[{ic:"ti-report-money",lbl:L("budgetReminder"),bg:"#E8EDF5",c:"#4A6FA5",eK:"budgEmail",pK:"budgPush"},{ic:"ti-users",lbl:L("rsvpUpdate"),bg:"var(--teal-light)",c:"var(--teal)",eK:"rsvpEmail",pK:"rsvpPush"},{ic:"ti-file-check",lbl:L("docReminder"),bg:"var(--pink-bg)",c:"var(--rose)",eK:"docEmail",pK:"docPush"},{ic:"ti-building-store",lbl:L("vendorNews"),bg:"var(--amber-bg)",c:"var(--amber)",eK:"vendEmail",pK:"vendPush"}];
   const pushPerm="Notification" in window?Notification.permission:"unsupported";
-  const pushStatusHTML=pushPerm==="granted"
-    ?`<div style="display:flex;align-items:center;gap:6px;background:var(--success-bg);color:var(--success);padding:8px 12px;border-radius:10px;font-size:12.5px;font-weight:600"><i class="ti ti-circle-check" style="font-size:15px"></i>Push Notifikasi Aktif</div>`
-    :pushPerm==="denied"
-    ?`<div style="display:flex;align-items:center;gap:6px;background:var(--danger-bg);color:var(--danger);padding:8px 12px;border-radius:10px;font-size:12.5px;font-weight:600"><i class="ti ti-circle-x" style="font-size:15px"></i>Diblokir — Aktifkan di pengaturan browser</div>`
-    :pushPerm==="unsupported"
-    ?`<div style="display:flex;align-items:center;gap:6px;background:var(--gray-light);color:var(--gray);padding:8px 12px;border-radius:10px;font-size:12.5px;font-weight:600"><i class="ti ti-alert-circle" style="font-size:15px"></i>Tidak didukung di browser ini</div>`
-    :`<button id="btn-req-push" style="background:linear-gradient(135deg,var(--rose-dark),var(--teal-dark));color:#fff;border:none;border-radius:10px;padding:10px 16px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;width:100%"><i class="ti ti-bell-ringing" style="font-size:15px"></i>Aktifkan Push Notifikasi</button>`;
+  const isOn=!!(S.notif&&S.notif.pushOn)&&pushPerm==="granted";
+  let statusHTML="";
+  let toggleHTML="";
+  if(pushPerm==="unsupported"){
+    statusHTML=`<div style="display:flex;align-items:center;gap:6px;background:var(--gray-light);color:var(--gray);padding:8px 12px;border-radius:10px;font-size:12.5px;font-weight:600"><i class="ti ti-alert-circle" style="font-size:15px"></i>Tidak didukung di browser ini</div>`;
+  }else if(pushPerm==="denied"){
+    statusHTML=`<div style="display:flex;align-items:center;gap:6px;background:var(--danger-bg);color:var(--danger);padding:8px 12px;border-radius:10px;font-size:12.5px;font-weight:600"><i class="ti ti-circle-x" style="font-size:15px"></i>Diblokir — Aktifkan izin notifikasi di pengaturan browser/perangkat Anda</div>`;
+  }else{
+    statusHTML=isOn
+      ?`<div style="display:flex;align-items:center;gap:6px;background:var(--success-bg);color:var(--success);padding:8px 12px;border-radius:10px;font-size:12.5px;font-weight:600"><i class="ti ti-circle-check" style="font-size:15px"></i>Push Notifikasi Aktif</div>`
+      :`<div style="display:flex;align-items:center;gap:6px;background:var(--gray-light);color:var(--gray);padding:8px 12px;border-radius:10px;font-size:12.5px;font-weight:600"><i class="ti ti-bell-off" style="font-size:15px"></i>Push Notifikasi Nonaktif</div>`;
+    toggleHTML=`<div class="notif-row" style="margin-top:12px"><span style="font-size:14.5px;font-weight:600">Notifikasi Push</span><button class="toggle-sw" id="btn-push-toggle" style="background:${isOn?"var(--rose)":"var(--border)"}"><div class="knob" style="left:${isOn?"23px":"3px"}"></div></button></div>`;
+  }
   return `<div class="back-header"><button class="back-btn" data-sub-back="main"><i class="ti ti-arrow-left" style="font-size:16px"></i></button><span style="font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:700;color:var(--rose)">${L("notifications")}</span></div>
-  <div style="padding:14px 18px 4px;font-size:13px;color:var(--gray)">${L("notifSub")}</div>
-  <div style="padding:10px 18px 8px">
-    <div style="background:var(--white);border-radius:14px;padding:14px;border:1px solid var(--border);margin-bottom:14px">
+  <div style="padding:14px 18px 4px;font-size:13px;color:var(--gray)">Aktifkan untuk menerima notifikasi push setiap ada perubahan data: anggaran, tamu, dokumen, persiapan, dan lainnya.</div>
+  <div style="padding:14px 18px 28px">
+    <div style="background:var(--white);border-radius:14px;padding:16px;border:1px solid var(--border)">
       <div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:13.5px;margin-bottom:10px;color:var(--dark)"><i class="ti ti-bell-ringing" style="font-size:17px;color:var(--rose)"></i>Status Push Notifikasi</div>
-      ${pushStatusHTML}
+      ${statusHTML}
+      ${toggleHTML}
     </div>
-  </div>
-  <div style="padding:0 18px 28px">${secs.map(s=>`<div style="background:var(--white);border-radius:16px;padding:16px;border:1px solid var(--border);margin-bottom:12px"><div style="display:flex;align-items:center;gap:9px;font-weight:600;font-size:14.5px;margin-bottom:13px"><div style="width:32px;height:32px;border-radius:10px;background:${s.bg};display:flex;align-items:center;justify-content:center"><i class="ti ${s.ic}" style="font-size:16px;color:${s.c}"></i></div>${s.lbl}</div>${[[L("emailLbl"),s.eK],[L("pushNotif"),s.pK]].map(([lbl,key])=>`<div class="notif-row"><span style="font-size:14px">${lbl}</span><button class="toggle-sw" data-notif-key="${key}" style="background:${S.notif[key]?"var(--rose)":"var(--border)"}"><div class="knob" style="left:${S.notif[key]?"23px":"3px"}"></div></button></div>`).join("")}</div>`).join("")}</div>`;
+  </div>`;
 }
 
 function subBantuan(){
