@@ -2039,10 +2039,25 @@ const rtPath=(path)=>`users/${_uid}/${path}`;
    COLLECTIONS → RTDB ONLY
    META/SETTINGS → FIRESTORE ONLY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* Tracking tulisan lokal untuk skip notif echo dari device sendiri */
+const _recentLocalWrites=new Map(); /* "col:id" -> timestamp */
+function markLocalWrite(col,id){
+  _recentLocalWrites.set(col+":"+String(id),Date.now());
+  if(_recentLocalWrites.size>200){
+    const now=Date.now();
+    _recentLocalWrites.forEach((t,k)=>{if(now-t>15000)_recentLocalWrites.delete(k);});
+  }
+}
+function isRecentLocalWrite(col,id){
+  const t=_recentLocalWrites.get(col+":"+String(id));
+  if(t==null)return false;
+  return (Date.now()-t)<8000;
+}
 async function fbSave(col,item){
   /* Data collections (tx, tamu, vendor, dll) HANYA ke RTDB */
   if(!_rtdbReady||!_RD||!_uid)return;
   try{
+    markLocalWrite(col,item.id); /* tandai supaya echo dari tulisan sendiri tidak memicu notif "dari perangkat lain" */
     const clean=JSON.parse(JSON.stringify({...item,id:String(item.id),_t:Date.now()}));
     const ref=_RD.ref(_rtdb,rtPath(`${col}/${String(item.id)}`));
     await _RD.set(ref,clean);
@@ -2054,6 +2069,7 @@ async function fbDelete(col,id){
   /* Hapus collection item HANYA dari RTDB */
   if(!_rtdbReady||!_RD||!_uid)return;
   try{
+    markLocalWrite(col,id);
     const ref=_RD.ref(_rtdb,rtPath(`${col}/${String(id)}`));
     await _RD.remove(ref);
     showSyncBadge();
@@ -2120,15 +2136,29 @@ async function loadFromFirestore(){
    REALTIME LISTENER (live sync antar perangkat)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 let _rtListener=null;
+let _rtFirstSnap=true; /* skip notif on initial load (saat app baru dibuka) */
+const _colMeta={
+  transactions:{label:"Transaksi",icon:"ti-report-money"},
+  seserahan:{label:"Seserahan",icon:"ti-gift"},
+  guests:{label:"Tamu",icon:"ti-users"},
+  documents:{label:"Dokumen",icon:"ti-file-check"},
+  vendors:{label:"Vendor",icon:"ti-building-store"},
+  brismed:{label:"Bridesmaid",icon:"ti-user-plus"},
+  brismedItems:{label:"Perlengkapan",icon:"ti-package"},
+  persiapan:{label:"Persiapan",icon:"ti-backpack"}
+};
 function startRTDBListener(){
   if(!_rtdbReady||!_RD||!_uid)return;
   if(_rtListener)_rtListener();
+  _rtFirstSnap=true;
   const ref=_RD.ref(_rtdb,`users/${_uid}`);
   _rtListener=()=>_RD.off(ref);
   _RD.onValue(ref,snap=>{
-    if(!snap.exists())return;
+    if(!snap.exists()){_rtFirstSnap=false;return;}
     const d=snap.val();
     let changed=false;
+    const isInitial=_rtFirstSnap;
+    const remoteNotifs=[]; /* {msg, icon} yang akan dikirim sebagai push setelah semua kolom diproses */
     /* Update collections if remote is newer */
     const cols=["transactions","seserahan","guests","documents","vendors","brismed","brismedItems","persiapan"];
     cols.forEach(col=>{
@@ -2137,10 +2167,38 @@ function startRTDBListener(){
         if(col==="transactions")items.sort((a,b)=>String(b.id).localeCompare(String(a.id)));
         const localStr=JSON.stringify(S[col]);
         const remoteStr=JSON.stringify(items);
-        if(localStr!==remoteStr){S[col]=items;changed=true;}
+        if(localStr!==remoteStr){
+          /* Deteksi item baru/berubah dari perangkat lain (skip saat initial load) */
+          if(!isInitial){
+            const oldMap={};(S[col]||[]).forEach(it=>{oldMap[String(it.id)]=it;});
+            const meta=_colMeta[col]||{label:col,icon:"ti-bell"};
+            items.forEach(it=>{
+              const prev=oldMap[String(it.id)];
+              const itName=it.name||it.label||"";
+              if(isRecentLocalWrite(col,it.id))return; /* skip echo dari tulisan sendiri */
+              if(!prev){
+                remoteNotifs.push({msg:meta.label+" baru: \""+itName+"\" ditambahkan dari perangkat lain",icon:meta.icon});
+              }else if(JSON.stringify(prev)!==JSON.stringify(it)){
+                remoteNotifs.push({msg:meta.label+" \""+itName+"\" diperbarui dari perangkat lain",icon:meta.icon});
+              }
+            });
+          }
+          S[col]=items;changed=true;
+        }
       }
     });
     if(changed){renderPage(curTab);showSyncBadge();}
+    /* Kirim push notifikasi untuk tiap perubahan dari device lain (maks 3 sekaligus biar tidak spam) */
+    if(!isInitial&&remoteNotifs.length>0){
+      remoteNotifs.slice(0,3).forEach(n=>{
+        if(!S.notifLog)S.notifLog=[];
+        S.notifLog.unshift({msg:n.msg,icon:n.icon,time:Date.now()});
+        sendPushNotif("Wedding Planner",n.msg);
+      });
+      if(S.notifLog&&S.notifLog.length>50)S.notifLog=S.notifLog.slice(0,50);
+      updateNotifDot();
+    }
+    _rtFirstSnap=false;
   });
 }
 
