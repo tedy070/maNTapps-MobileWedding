@@ -174,6 +174,9 @@ textarea.input-field:focus{border-color:var(--teal)}
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal-sheet" id="modal-content"><div class="modal-handle"></div></div>
 </div>
+<div class="modal-overlay" id="wa-modal-overlay" style="align-items:center;padding:16px">
+  <div id="wa-modal-content" style="background:var(--white);border-radius:20px;padding:20px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.18)"></div>
+</div>
 <div class="subpage" id="subpage-container"></div>
 <div class="toast" id="toast"></div>
 <input type="file" id="file-input" accept="image/*" style="display:none">
@@ -187,6 +190,8 @@ en:{tabOverview:"Overview",tabBudget:"Budget",tabSeserahan:"Dowry",tabGuests:"Gu
 /* ── STATE ── */
 const S={
   couple:{p1:"Nadya",p2:"Tedi",date:"2024-10-12",venue:"The Glasshouse, New York",theme:"Ethereal Minimal"},
+  waLink:"https://inv.undangan.id/tedi-nadya/?to=",
+  waTemplate:"Kepada Yth.\nBapak/Ibu/Saudara/i\n*{nama}*\n_____________________\n*Assalamualaikum Warahmatullahi Wabarakatuh*\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i {nama}, untuk menghadiri acara pernikahan kami.\n*Berikut link undangan kami*, untuk info lengkap dari acara, bisa kunjungi :\n{link}\nMerupakan suatu kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan untuk hadir dan memberikan doa restu.\n*Wassalamualaikum Warahmatullahi Wabarakatuh*\nTerima Kasih\nHormat kami,\nTEDI & NADYA\n____________________",
   income:0,
   transactions:[
     {id:1,name:"DP Katering Utama",cat:"Catering",type:"out",amount:20000000,status:"Lunas",date:"2024-10-05",notes:""},
@@ -282,6 +287,52 @@ const fmt=n=>"Rp "+Math.round(n).toLocaleString("id-ID");
 const fmtN=n=>Math.round(n).toLocaleString("id-ID");
 const fmtMoney=v=>{const d=(v||"").replace(/\D/g,"");return d?parseInt(d,10).toLocaleString("id-ID"):"";};
 const parseMoney=v=>parseInt((v||"").replace(/\D/g,"")||"0",10);
+
+/* ── WhatsApp Undangan ── */
+function buildWaMessage(name){
+  const link=(S.waLink||"").trim();
+  const tpl=(S.waTemplate||"").trim();
+  const encodedName=encodeURIComponent(name);
+  const fullLink=link+(link.includes("?to=")?"":"")+encodedName;
+  return tpl.replace(/\{nama\}/g,name).replace(/\{link\}/g,fullLink);
+}
+function openWaPreview(guestId,mode){
+  const g=S.guests.find(x=>String(x.id)===String(guestId));
+  if(!g)return;
+  const phone=(g.contact||"").replace(/\D/g,"");
+  const isSend=mode==="send";
+  if(isSend&&!phone){showToast("Lengkapi nomor WA tamu terlebih dahulu");return;}
+  const ov=document.getElementById("wa-modal-overlay");
+  const mc=document.getElementById("wa-modal-content");
+  const msg=buildWaMessage(g.name);
+  const headerColor=isSend?"#128C7E":"var(--rose)";
+  const headerIcon=isSend?"ti-brand-whatsapp":"ti-eye";
+  const headerLabel=isSend?"Kirim Undangan":"Preview Pesan";
+  mc.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:7px;font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;color:${headerColor}"><i class="ti ${headerIcon}" style="font-size:17px"></i>${headerLabel}</div>
+    <button id="wa-modal-close" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray)"><i class="ti ti-x" style="font-size:13px"></i></button>
+  </div>
+  <div style="font-size:11.5px;color:var(--gray);margin-bottom:4px">Kepada: <strong style="color:var(--dark)">${g.name}</strong></div>
+  ${phone?`<div style="font-size:11.5px;color:var(--gray);margin-bottom:12px">No. WA: <strong style="color:var(--dark)">+${phone}</strong></div>`:`<div style="font-size:11.5px;color:var(--amber);margin-bottom:12px;display:flex;align-items:center;gap:5px"><i class="ti ti-alert-circle" style="font-size:12px"></i>Nomor WA belum diisi — hanya bisa preview</div>`}
+  <div style="font-size:11px;font-weight:600;color:var(--gray);letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px">Isi Pesan</div>
+  <textarea id="wa-preview-text" style="width:100%;min-height:260px;border:1.5px solid var(--border);border-radius:12px;padding:12px;font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.6;color:var(--dark);background:var(--bg);resize:vertical;outline:none;box-sizing:border-box">${msg}</textarea>
+  <div style="font-size:11px;color:var(--gray);margin-top:6px;margin-bottom:16px"><i class="ti ti-info-circle" style="font-size:11px"></i> Anda bisa edit pesan di atas. Perubahan hanya berlaku untuk pengiriman ini.</div>
+  <div style="display:flex;gap:10px">
+    <button id="wa-cancel-btn" style="flex:1;padding:12px;border:1.5px solid var(--border);border-radius:12px;background:var(--white);color:var(--gray);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer">Tutup</button>
+    ${phone?`<button id="wa-send-btn" style="flex:2;padding:12px;border:none;border-radius:12px;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px"><i class="ti ti-brand-whatsapp" style="font-size:16px"></i>Kirim via WhatsApp</button>`:""}
+  </div>`;
+  ov.classList.add("open");
+  document.getElementById("wa-modal-close").onclick=closeWaModal;
+  document.getElementById("wa-cancel-btn").onclick=closeWaModal;
+  const sendBtn=document.getElementById("wa-send-btn");
+  if(sendBtn)sendBtn.onclick=()=>{
+    const finalMsg=document.getElementById("wa-preview-text").value;
+    const url="https://wa.me/"+phone+"?text="+encodeURIComponent(finalMsg);
+    window.open(url,"_blank");
+    closeWaModal();
+  };
+}
+function closeWaModal(){document.getElementById("wa-modal-overlay").classList.remove("open");}
 
 /* ── Photo picker ── */
 document.getElementById("file-input").addEventListener("change",function(){
@@ -518,6 +569,7 @@ function initTabs(){
   document.getElementById("btn-notif").addEventListener("click",()=>showNotifPanel());
   document.getElementById("btn-profile").addEventListener("click",()=>openSub("main"));
   document.getElementById("modal-overlay").addEventListener("click",function(e){if(e.target===this)closeModal();});
+  document.getElementById("wa-modal-overlay").addEventListener("click",function(e){if(e.target===this)closeWaModal();});
 }
 
 function renderPage(name){
@@ -544,6 +596,8 @@ function bindListEvents(){
   document.querySelectorAll("[data-edit-tx]").forEach(b=>{ b.onclick=()=>openModal("tx",b.dataset.editTx); });
   document.querySelectorAll("[data-edit-ses]").forEach(b=>{ b.onclick=()=>openModal("ses",b.dataset.editSes); });
   document.querySelectorAll("[data-edit-guest]").forEach(b=>{ b.onclick=()=>openModal("guest",b.dataset.editGuest); });
+  document.querySelectorAll("[data-preview-guest]").forEach(b=>{ b.onclick=()=>openWaPreview(b.dataset.previewGuest,"preview"); });
+  document.querySelectorAll("[data-wa-guest]").forEach(b=>{ b.onclick=()=>openWaPreview(b.dataset.waGuest,"send"); });
   document.querySelectorAll("[data-edit-doc]").forEach(b=>{ b.onclick=()=>openModal("doc",b.dataset.editDoc); });
   document.querySelectorAll("[data-edit-pers]").forEach(b=>{ b.onclick=()=>openModal("pers",b.dataset.editPers); });
   document.querySelectorAll("[data-pers-filter]").forEach(b=>{ b.onclick=()=>{S.persiapanFilter=b.dataset.persFilter;renderPage("dokumen");}; });
@@ -828,7 +882,8 @@ function guestCard(g){
     :vl==="VIP"
     ?`<span style="font-size:10.5px;font-weight:700;background:var(--amber-bg);color:var(--amber);padding:3px 10px;border-radius:20px">VIP</span>`
     :"";
-  return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14.5px;margin-bottom:4px">${g.name}</div><div style="font-size:12.5px;color:var(--gray);margin-bottom:9px;display:flex;align-items:center;gap:5px"><i class="ti ${g.count>1?"ti-users":"ti-user"}" style="font-size:14px"></i>${g.count}</div><div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center"><span style="font-size:10.5px;font-weight:600;background:var(--gray-light);color:var(--gray);padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px">${g.group}</span>${vipBadge}<span class="badge ${sCls(g.rsvp)}"><i class="ti ${rsvpIcon(g.rsvp)}" style="font-size:10px"></i> ${g.rsvp}</span></div></div><button class="edit-btn" data-edit-guest="${g.id}" style="margin-top:2px"><i class="ti ti-pencil" style="font-size:13px"></i></button></div></div>`;
+  const hasPhone=(g.contact||"").replace(/\D/g,"").length>=8;
+  return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14.5px;margin-bottom:4px">${g.name}</div><div style="font-size:12.5px;color:var(--gray);margin-bottom:9px;display:flex;align-items:center;gap:5px"><i class="ti ${g.count>1?"ti-users":"ti-user"}" style="font-size:14px"></i>${g.count}</div><div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center"><span style="font-size:10.5px;font-weight:600;background:var(--gray-light);color:var(--gray);padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px">${g.group}</span>${vipBadge}<span class="badge ${sCls(g.rsvp)}"><i class="ti ${rsvpIcon(g.rsvp)}" style="font-size:10px"></i> ${g.rsvp}</span></div></div><div style="display:flex;gap:6px;align-items:flex-start;margin-top:2px"><button class="edit-btn" data-preview-guest="${g.id}" title="Preview Pesan" style="background:var(--white);border-color:var(--border);color:var(--gray)"><i class="ti ti-eye" style="font-size:13px"></i></button><button class="edit-btn" data-wa-guest="${g.id}" title="${hasPhone?"Kirim Undangan WA":"Nomor WA belum diisi"}" style="background:${hasPhone?"#e8fdf0":"var(--white)"};border-color:${hasPhone?"#25D366":"var(--border)"};color:${hasPhone?"#128C7E":"var(--gray)"}"><i class="ti ti-brand-whatsapp" style="font-size:13px"></i></button><button class="edit-btn" data-edit-guest="${g.id}"><i class="ti ti-pencil" style="font-size:13px"></i></button></div></div></div>`;
 }
 
 function brismedPersonCard(b){
@@ -1997,6 +2052,15 @@ function subDetail(){
       <div style="font-size:10px;font-weight:600;color:var(--gray);letter-spacing:.7px;text-transform:uppercase;margin-top:16px;margin-bottom:8px">${L("theme")}</div>
       <div style="display:flex;gap:7px;flex-wrap:wrap">${["Ethereal Minimal","Classic Romance","Modern Chic"].map(th=>`<span class="pill${S.couple.theme===th?" active":""}" data-theme="${th}">${th}</span>`).join("")}</div>
     </div>
+    <div style="background:var(--white);border-radius:16px;padding:16px;border:1px solid var(--border);margin-bottom:16px">
+      <div style="font-size:10px;font-weight:600;color:var(--gray);letter-spacing:.7px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px"><i class="ti ti-brand-whatsapp" style="font-size:13px;color:#25D366"></i>UNDANGAN WHATSAPP</div>
+      <div style="font-size:11.5px;color:var(--gray);margin-bottom:4px">Link Undangan Digital</div>
+      <input id="d-walink" class="input-field" value="${S.waLink||""}" placeholder="https://undangan.id/nama-pasangan/?to=">
+      <div style="font-size:10.5px;color:var(--gray);margin-top:4px;margin-bottom:14px"><i class="ti ti-info-circle" style="font-size:11px"></i> Pastikan link diakhiri dengan <code>?to=</code> — nama tamu akan otomatis ditambahkan.</div>
+      <div style="font-size:11.5px;color:var(--gray);margin-bottom:4px">Template Pesan</div>
+      <div style="font-size:10.5px;color:var(--gray);margin-bottom:6px">Gunakan <code>{nama}</code> untuk nama tamu dan <code>{link}</code> untuk link undangan.</div>
+      <textarea id="d-watemplate" style="width:100%;min-height:200px;border:1.5px solid var(--border);border-radius:12px;padding:12px;font-family:'DM Sans',sans-serif;font-size:12.5px;line-height:1.6;color:var(--dark);background:var(--bg);resize:vertical;outline:none;box-sizing:border-box">${S.waTemplate||""}</textarea>
+    </div>
     <button class="btn-primary" id="save-detail-btn"><i class="ti ti-circle-check" style="font-size:16px"></i>${L("saveDetails")}</button>
   </div>`;
 }
@@ -2006,6 +2070,8 @@ function saveDetail(){
   S.couple.p1=g("d-p1")||S.couple.p1;S.couple.p2=g("d-p2")||S.couple.p2;
   S.couple.date=g("d-date")||S.couple.date;S.couple.venue=g("d-venue")||S.couple.venue;
   if(selTheme){S.couple.theme=selTheme;selTheme=null;}
+  const wl=g("d-walink");if(wl!==undefined)S.waLink=wl;
+  const wt=(sp.querySelector("#d-watemplate")||{}).value;if(wt!==undefined)S.waTemplate=wt;
   openSub("main");renderPage(curTab);showToast(L("detailSaved"));
 }
 
@@ -2232,6 +2298,8 @@ async function loadFromFirestore(){
       if(d.themeId)S.themeId=d.themeId;
       if(d.profilePhoto)S.profilePhoto=d.profilePhoto;
       if(d.coverPhoto)S.coverPhoto=d.coverPhoto;
+      if(d.waLink!==undefined)S.waLink=d.waLink;
+      if(d.waTemplate!==undefined)S.waTemplate=d.waTemplate;
     }
     const notifSnap=await _FS.getDoc(_FS.doc(_db,"users",_uid,"meta","notif"));
     if(notifSnap.exists())Object.assign(S.notif,notifSnap.data());
@@ -2344,7 +2412,7 @@ async function syncPersiapan(id){
   const t=id?(S.persiapan||[]).find(x=>String(x.id)===String(id)):(S.persiapan||[])[(S.persiapan||[]).length-1];
   if(t)await fbSave("persiapan",t);
 }
-async function syncSettings(){await fbSaveMeta("settings",{couple:S.couple,income:S.income,lang:S.lang,darkMode:S.darkMode,themeId:S.themeId||"rosegold",profilePhoto:"Foto_Profil.jpeg"||null,coverPhoto:"Cover_Profil.jpeg"||null});}
+async function syncSettings(){await fbSaveMeta("settings",{couple:S.couple,income:S.income,lang:S.lang,darkMode:S.darkMode,themeId:S.themeId||"rosegold",profilePhoto:"Foto_Profil.jpeg"||null,coverPhoto:"Cover_Profil.jpeg"||null,waLink:S.waLink||"",waTemplate:S.waTemplate||""});}
 async function syncNotif(){await fbSaveMeta("notif",{...S.notif});}
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
