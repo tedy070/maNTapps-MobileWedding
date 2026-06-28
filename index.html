@@ -207,6 +207,10 @@ const S={
     {id:4,name:"Skincare Set",cat:"Skincare",party:"Pria",price:2500000,status:"Belum Dibeli"},
     {id:5,name:"Mukena Premium",cat:"Prayer Set",party:"Wanita",price:2500000,status:"Sudah Dibeli"}
   ],
+  souvenir:[
+    {id:1,name:"Gantungan Kunci Akrilik",cat:"Souvenir",qty:150,price:8000,status:"Sudah Dibeli",link:""},
+    {id:2,name:"Tote Bag Custom",cat:"Souvenir",qty:150,price:15000,status:"Belum Dibeli",link:""}
+  ],
   guests:[
     {id:1,name:"Keluarga Bpk. Budi Santoso",group:"Keluarga Pihak Pria",count:4,vip:true,rsvp:"Hadir",contact:""},
     {id:2,name:"Sarah Wijaya & Pasangan",group:"Teman Kuliah",count:2,vip:false,rsvp:"Menunggu",contact:""},
@@ -229,7 +233,7 @@ const S={
   ],
   notif:{pushOn:false},
   darkMode:false,lang:"id",themeId:"rosegold",
-  budFilter:"semua",sesFilter:"Semua",guestSearch:"",guestFilter:"Semua",vendSearch:"",
+  budFilter:"semua",sesFilter:"Semua",sesTab:"seserahan",guestSearch:"",guestFilter:"Semua",vendSearch:"",
   tamuTab:"tamu",
   guestFilterMode:"gender",vipFilter:"Semua",
   brmSubTab:"nama",
@@ -275,6 +279,7 @@ const rsvpIcon=r=>r==="Hadir"?"ti-circle-check":r==="Menunggu"?"ti-clock":"ti-ci
 let curTab="ringkasan",toastTmr=null;
 let txType="out",txStatus="Belum Dibayar",txPaySearch="",txPaySel=null;
 let sesParty="Pria",sesStatus="Belum Dibeli";
+let souvStatus="Belum Dibeli";
 let gGroup="Teman Wanita",gRsvp="Menunggu",gCount=1,gVipLevel="Biasa";
 let docSt="Belum Diurus",vOk=false,selTheme=null;
 let brmGGroup="Keluarga",brmGRsvp="Menunggu",brmGCount=1,brmGVip=false;
@@ -359,8 +364,10 @@ function totals(){
   const tidakH=S.guests.filter(g=>g.rsvp==="Tidak Hadir").reduce((a,g)=>a+g.count,0);
   const sesDone=S.seserahan.filter(i=>["Siap","Sudah Dibeli","Sudah Dihias"].includes(i.status)).length;
   const sesCost=S.seserahan.reduce((a,i)=>a+i.price,0);
+  const souvDone=(S.souvenir||[]).filter(i=>["Siap","Sudah Dibeli"].includes(i.status)).length;
+  const souvCost=(S.souvenir||[]).reduce((a,i)=>a+(i.qty||1)*i.price,0);
   const vcost=S.vendors.reduce((a,v)=>a+v.cost,0);
-  return{out,xIn,saldo:S.income+xIn-out,docDone,docPct,totalG,hadir,tunggu,tidakH,sesDone,sesCost,vcost};
+  return{out,xIn,saldo:S.income+xIn-out,docDone,docPct,totalG,hadir,tunggu,tidakH,sesDone,sesCost,souvDone,souvCost,vcost};
 }
 
 /* ── Toast ── */
@@ -393,6 +400,8 @@ function addNotif(msg,icon){
   updateNotifDot();
   /* Send push notification */
   sendPushNotif("Wedding Planner",msg);
+  /* Simpan log notifikasi ke Firebase agar tidak hilang saat refresh/ganti device */
+  if(typeof _uid!=="undefined"&&_uid)syncNotifLog();
 }
 function updateNotifDot(){
   const btn=document.getElementById("btn-notif");if(!btn)return;
@@ -418,12 +427,14 @@ function buildNotifPage(){
     {key:"transaksi",label:"Transaksi",icon:"ti-report-money"},
     {key:"tamu",label:"Tamu",icon:"ti-users"},
     {key:"seserahan",label:"Seserahan",icon:"ti-gift"},
+    {key:"souvenir",label:"Souvenir",icon:"ti-box-seam"},
     {key:"vendor",label:"Vendor",icon:"ti-building-store"},
     {key:"bridesmaid",label:"Bridesmaid",icon:"ti-dress"},
     {key:"dokumen",label:"Dokumen",icon:"ti-file-check"},
   ];
   const iconMap={
     "ti-cash":"transaksi","ti-report-money":"transaksi","ti-gift":"seserahan",
+    "ti-box-seam":"souvenir",
     "ti-users":"tamu","ti-user-plus":"tamu","ti-building-store":"vendor",
     "ti-package":"bridesmaid","ti-dress":"bridesmaid","ti-file-check":"dokumen","ti-trash":"semua","ti-backpack":"dokumen"
   };
@@ -505,6 +516,7 @@ function initNotifPageEvents(){
   if(clearBtn)clearBtn.onclick=()=>{
     if(!confirm("Hapus semua notifikasi?"))return;
     S.notifLog=[];updateNotifDot();
+    if(typeof _uid!=="undefined"&&_uid)syncNotifLog();
     sp.innerHTML=buildNotifPage();initNotifPageEvents();
   };
   const markBtn=document.getElementById("notif-mark-read");
@@ -523,6 +535,8 @@ function getBudgetItems(){
   const items=[];
   /* Seserahan */
   S.seserahan.forEach(i=>items.push({id:"ses_"+i.id,label:i.name,type:"Seserahan",price:i.price,ref:{col:"seserahan",id:i.id}}));
+  /* Souvenir */
+  (S.souvenir||[]).forEach(i=>items.push({id:"souv_"+i.id,label:i.name,type:"Souvenir",price:(i.qty||1)*i.price,ref:{col:"souvenir",id:i.id}}));
   /* Perlengkapan Bridesmaid (shared items) */
   (S.brismedItems||[]).forEach(i=>items.push({id:"brmsi_"+i.id,label:i.name,type:"Perlengkapan",price:i.price||0,ref:{col:"brismedItems",id:i.id}}));
   /* Vendor */
@@ -597,6 +611,7 @@ function afterRender(name){
 function bindListEvents(){
   document.querySelectorAll("[data-edit-tx]").forEach(b=>{ b.onclick=()=>openModal("tx",b.dataset.editTx); });
   document.querySelectorAll("[data-edit-ses]").forEach(b=>{ b.onclick=()=>openModal("ses",b.dataset.editSes); });
+  document.querySelectorAll("[data-edit-souvenir]").forEach(b=>{ b.onclick=()=>openModal("souvenir",b.dataset.editSouvenir); });
   document.querySelectorAll("[data-edit-guest]").forEach(b=>{ b.onclick=()=>openModal("guest",b.dataset.editGuest); });
   document.querySelectorAll("[data-preview-guest]").forEach(b=>{ b.onclick=()=>openWaPreview(b.dataset.previewGuest,"preview"); });
   document.querySelectorAll("[data-wa-guest]").forEach(b=>{ b.onclick=()=>openWaPreview(b.dataset.waGuest,"send"); });
@@ -629,9 +644,15 @@ function bindListEvents(){
   if(btnBrmNama)btnBrmNama.onclick=()=>{S.brmSubTab="nama";renderPage("tamu");};
   const btnBrmPerl=document.getElementById("btn-brmsub-perlengkapan");
   if(btnBrmPerl)btnBrmPerl.onclick=()=>{S.brmSubTab="perlengkapan";renderPage("tamu");};
+  /* Seserahan / Souvenir sub-tab */
+  const btnSesTab=document.getElementById("btn-ses-tab");
+  if(btnSesTab)btnSesTab.onclick=()=>{S.sesTab="seserahan";renderPage("seserahan");};
+  const btnSouvTab=document.getElementById("btn-souvenir-tab");
+  if(btnSouvTab)btnSouvTab.onclick=()=>{S.sesTab="souvenir";renderPage("seserahan");};
   /* FABs */
   const fabTx=document.getElementById("fab-tx");if(fabTx)fabTx.onclick=()=>openModal("tx",null);
   const fabSes=document.getElementById("fab-ses");if(fabSes)fabSes.onclick=()=>openModal("ses",null);
+  const fabSouvenir=document.getElementById("fab-souvenir");if(fabSouvenir)fabSouvenir.onclick=()=>openModal("souvenir",null);
   const fabDoc=document.getElementById("fab-doc");if(fabDoc)fabDoc.onclick=()=>openModal("doc",null);
   const fabPers=document.getElementById("fab-pers");if(fabPers)fabPers.onclick=()=>openModal("pers",null);
   const btnDocSubDok=document.getElementById("btn-doc-sub-dokumen");if(btnDocSubDok)btnDocSubDok.onclick=()=>{S.docSubTab="dokumen";renderPage("dokumen");};
@@ -814,6 +835,9 @@ function pgRingkasan(){
     <div class="progress-bar"><div class="progress-fill" style="width:${sesPct}%"></div></div>
     <div style="margin-top:8px;font-size:12px;color:var(--gray)">${L("estimatedCost")}: <span style="font-weight:700;color:var(--rose-dark)">${fmt(t.sesCost)}</span></div>
   </div>
+  <div class="card" style="background:var(--amber-bg);border-color:var(--amber)">
+    ${(()=>{const souv=S.souvenir||[];const souvPct=Math.round(t.souvDone/Math.max(souv.length,1)*100);const totalQty=souv.reduce((a,i)=>a+(i.qty||1),0);return`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-weight:600;font-size:15px;color:var(--amber)">Souvenir</span><i class="ti ti-box-seam" style="font-size:20px;color:var(--amber)"></i></div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px"><span style="font-size:13px;color:var(--amber)">${t.souvDone} / ${souv.length} item siap &middot; ${totalQty} pcs</span><span style="font-size:13px;font-weight:700;color:var(--amber)">${souvPct}%</span></div><div class="progress-bar" style="background:rgba(139,94,26,.15)"><div class="progress-fill" style="width:${souvPct}%;background:var(--amber)"></div></div><div style="margin-top:8px;font-size:12px;color:var(--amber)">${L("estimatedCost")}: <span style="font-weight:700">${fmt(t.souvCost)}</span></div>`;})()}
+  </div>
   <div class="card" style="background:var(--teal-light);border-color:var(--teal)">
     ${(()=>{const bItems=S.brismedItems||[];const bDone=bItems.filter(i=>["Siap","Sudah Dibeli","Sudah Dihias"].includes(i.status)).length;const bTotal=bItems.length;const bPct=Math.round(bDone/Math.max(bTotal,1)*100);const bCost=bItems.reduce((a,i)=>a+i.price,0);return`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-weight:600;font-size:15px;color:var(--teal-dark)">Perlengkapan Bridesmaid</span><i class="ti ti-package" style="font-size:20px;color:var(--teal)"></i></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--teal-dark)">${bTotal}</div><div style="font-size:9.5px;font-weight:600;color:var(--teal);letter-spacing:.4px;text-transform:uppercase">Total</div></div><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--success)">${bDone}</div><div style="font-size:9.5px;font-weight:600;color:var(--success);letter-spacing:.4px;text-transform:uppercase">Siap</div></div><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--teal-dark)">${bPct}%</div><div style="font-size:9.5px;font-weight:600;color:var(--teal);letter-spacing:.4px;text-transform:uppercase">Progress</div></div></div><div class="progress-bar" style="background:rgba(61,122,110,.2)"><div class="progress-fill" style="width:${bPct}%;background:var(--teal)"></div></div><div style="margin-top:8px;font-size:12px;color:var(--teal-dark)">Estimasi Biaya: <span style="font-weight:700">${fmt(bCost)}</span>${S.brismed.length>0?` &middot; ${S.brismed.length} bridesmaid`:""}</div>`;})()}
   </div>
@@ -866,15 +890,41 @@ function pgAnggaran(){
 }
 
 function pgSeserahan(){
+  const isSouv=S.sesTab==="souvenir";
+  return `<div style="padding:16px 18px 0">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="section-head" style="margin-bottom:0">${isSouv?"Souvenir":L("seserahanTitle")}</div>
+    </div>
+    <div style="display:flex;background:var(--gray-light);border-radius:14px;padding:4px;margin-bottom:14px">
+      <button id="btn-ses-tab" style="flex:1;border:none;border-radius:11px;padding:9px 0;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;background:${!isSouv?"var(--white)":"transparent"};color:${!isSouv?"var(--dark)":"var(--gray)"};box-shadow:${!isSouv?"0 1px 4px rgba(0,0,0,.09)":"none"};display:flex;align-items:center;justify-content:center;gap:6px"><i class="ti ti-gift" style="font-size:15px"></i>Seserahan</button>
+      <button id="btn-souvenir-tab" style="flex:1;border:none;border-radius:11px;padding:9px 0;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;background:${isSouv?"var(--white)":"transparent"};color:${isSouv?"var(--amber)":"var(--gray)"};box-shadow:${isSouv?"0 1px 4px rgba(0,0,0,.09)":"none"};display:flex;align-items:center;justify-content:center;gap:6px"><i class="ti ti-box-seam" style="font-size:15px"></i>Souvenir</button>
+    </div>
+  </div>
+  <div id="ses-page-content">${isSouv?pgSouvenirContent():pgSeserahanContent()}</div>`;
+}
+
+function pgSeserahanContent(){
   const t=totals();const pct=Math.round(t.sesDone/Math.max(S.seserahan.length,1)*100);
   const items=S.seserahan.filter(i=>S.sesFilter==="Semua"||(S.sesFilter==="Pria"&&i.party==="Pria")||(S.sesFilter==="Wanita"&&i.party==="Wanita")||(S.sesFilter==="Mahar"&&i.party==="Mahar"));
-  return `<div style="padding:18px 18px 0"><div class="section-head" style="margin-bottom:4px">${L("seserahanTitle")}</div><div style="font-size:13px;color:var(--gray);margin-bottom:12px">${L("seserahanSub")}</div></div>
+  return `<div style="padding:0 18px 0"><div style="font-size:13px;color:var(--gray);margin-bottom:12px">${L("seserahanSub")}</div></div>
   <div class="card"><div style="font-size:10px;font-weight:600;color:var(--gray);letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px">${L("overallProgress")}</div><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-weight:600;font-size:14px">${t.sesDone} / ${S.seserahan.length} ${L("itemsReady")}</span><span style="font-size:13px;color:var(--gray)">${pct}%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div></div>
   <div class="grad-card"><div style="font-size:10px;font-weight:600;color:var(--rose-mid);letter-spacing:.6px;text-transform:uppercase;margin-bottom:4px">${L("estimatedCost")}</div><div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--rose-dark);margin-top:2px">${fmt(t.sesCost)}</div><div style="font-size:12.5px;color:var(--teal);margin-top:5px;display:flex;align-items:center;gap:4px"><i class="ti ti-circle-check" style="font-size:14px"></i>${L("withinBudget")}</div></div>
   <div class="pill-row">${[[L("allParty"),"Semua"],[L("male"),"Pria"],[L("female"),"Wanita"],[L("dowry"),"Mahar"]].map(([lbl,v])=>`<span class="pill${S.sesFilter===v?" active":""}" data-ses-filter="${v}">${lbl}</span>`).join("")}</div>
   ${items.map(item=>{const refId="ses_"+item.id;const paid=getPaidAmount(refId);const warn=getBudgetWarning(item.price,paid);const pct=item.price>0?Math.min(100,Math.round(paid/item.price*100)):0;return`<div class="card"><div style="display:flex;gap:12px"><div style="width:48px;height:48px;border-radius:13px;background:var(--gray-light);display:flex;align-items:center;justify-content:center;color:var(--gray);flex-shrink:0"><i class="ti ${catIcon(item.cat)}" style="font-size:22px"></i></div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="font-weight:600;font-size:14px">${item.name}</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><span class="badge ${sCls(item.status)}"><i class="ti ${sIcon(item.status)}" style="font-size:10px"></i> ${item.status}</span><button class="edit-btn" data-edit-ses="${item.id}" onclick="event.stopPropagation()"><i class="ti ti-pencil" style="font-size:13px"></i></button></div></div><div style="font-size:12px;color:var(--gray);margin-top:2px">${item.cat} &middot; ${item.party==="Mahar"?item.party:"Untuk "+item.party}</div>${item.link?`<div style="margin-top:6px"><a href="${item.link}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--rose-dark);text-decoration:none;background:var(--pink-bg);padding:4px 10px;border-radius:20px;border:1px solid var(--rose-light)"><i class="ti ti-shopping-bag" style="font-size:12px"></i>Beli di Toko</a></div>`:""}
 <div data-pay-history="${refId}" data-pay-label="${item.name.replace(/"/g,'&quot;')}" data-pay-budget="${item.price}" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-light);cursor:pointer"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:11px;color:var(--gray)">Anggaran: <span style="font-weight:700;color:var(--dark)">${fmt(item.price)}</span></span><span class="badge ${warn.cls}" style="font-size:10px"><i class="ti ${warn.ic}" style="font-size:9px"></i> ${warn.label}</span></div><div class="progress-bar" style="height:4px;margin-bottom:4px"><div class="progress-fill" style="width:${pct}%;background:${warn.label==="Overbudget"?"var(--danger)":warn.label==="Cukup"?"var(--amber)":"var(--teal)"}"></div></div><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:var(--gray);display:flex;align-items:center;gap:4px">Terpakai: <span style="font-weight:600;color:var(--dark)">${fmt(paid)}</span><i class="ti ti-receipt" style="font-size:12px;color:var(--teal)"></i></span></div></div></div></div></div>`;}).join("")}
   <button class="fab" id="fab-ses"><i class="ti ti-plus" style="font-size:22px"></i></button>`;
+}
+
+function pgSouvenirContent(){
+  const t=totals();const souv=S.souvenir||[];
+  const pct=Math.round(t.souvDone/Math.max(souv.length,1)*100);
+  const totalQty=souv.reduce((a,i)=>a+(i.qty||1),0);
+  return `<div style="padding:0 18px 0"><div style="font-size:13px;color:var(--gray);margin-bottom:12px">Kelola souvenir untuk tamu undangan — gantungan kunci, tote bag, dan kenang-kenangan lainnya.</div></div>
+  <div class="card"><div style="font-size:10px;font-weight:600;color:var(--gray);letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px">${L("overallProgress")}</div><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-weight:600;font-size:14px">${t.souvDone} / ${souv.length} ${L("itemsReady")} &middot; ${totalQty} pcs</span><span style="font-size:13px;color:var(--gray)">${pct}%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div></div>
+  <div class="grad-card"><div style="font-size:10px;font-weight:600;color:var(--rose-mid);letter-spacing:.6px;text-transform:uppercase;margin-bottom:4px">${L("estimatedCost")}</div><div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--rose-dark);margin-top:2px">${fmt(t.souvCost)}</div></div>
+  ${souv.map(item=>{const total=(item.qty||1)*item.price;return`<div class="card"><div style="display:flex;gap:12px"><div style="width:48px;height:48px;border-radius:13px;background:var(--amber-bg);display:flex;align-items:center;justify-content:center;color:var(--amber);flex-shrink:0"><i class="ti ti-box-seam" style="font-size:22px"></i></div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="font-weight:600;font-size:14px">${item.name}</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><span class="badge ${sCls(item.status)}"><i class="ti ${sIcon(item.status)}" style="font-size:10px"></i> ${item.status}</span><button class="edit-btn" data-edit-souvenir="${item.id}" onclick="event.stopPropagation()"><i class="ti ti-pencil" style="font-size:13px"></i></button></div></div><div style="font-size:12px;color:var(--gray);margin-top:2px">${item.qty||1} pcs &middot; ${fmt(item.price)}/pcs</div>${item.link?`<div style="margin-top:6px"><a href="${item.link}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--amber);text-decoration:none;background:var(--amber-bg);padding:4px 10px;border-radius:20px;border:1px solid var(--amber)"><i class="ti ti-shopping-bag" style="font-size:12px"></i>Beli di Toko</a></div>`:""}
+<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-light)"><span style="font-size:11px;color:var(--gray)">Total: <span style="font-weight:700;color:var(--dark)">${fmt(total)}</span></span></div></div></div></div>`;}).join("")}
+  <button class="fab" id="fab-souvenir"><i class="ti ti-plus" style="font-size:22px"></i></button>`;
 }
 
 function guestCard(g){
@@ -1111,11 +1161,11 @@ function openModal(type,id,brmId){
     mc.dataset.brmId=brmId||id;
     mc.dataset.itemId=brmId?id:"";
   } else {
-    const builders={tx:buildTxForm,ses:buildSesForm,guest:buildGuestForm,doc:buildDocForm,pers:buildPersForm,vendor:buildVendorForm,brismed:buildBrismedForm,"brismed-ses":buildBrismedSeserahanForm};
+    const builders={tx:buildTxForm,ses:buildSesForm,souvenir:buildSouvenirForm,guest:buildGuestForm,doc:buildDocForm,pers:buildPersForm,vendor:buildVendorForm,brismed:buildBrismedForm,"brismed-ses":buildBrismedSeserahanForm};
     mc.innerHTML="<div class=\"modal-handle\"></div>"+(builders[type]?builders[type](id):"");
   }
   setTimeout(()=>{
-    ["m-tx-amt","m-ses-price","m-v-cost","m-brmi-price","m-brms-price","m-pers-price"].forEach(eid=>bindMoney(eid));
+    ["m-tx-amt","m-ses-price","m-souv-price","m-v-cost","m-brmi-price","m-brms-price","m-pers-price"].forEach(eid=>bindMoney(eid));
     bindModalEvents(type,id,brmId);
   },30);
 }
@@ -1145,6 +1195,7 @@ function bindModalEvents(type,id,brmId){
     const t=savBtn.dataset.save||type;
     if(t==="tx")saveTx(id);
     else if(t==="ses")saveSes(id);
+    else if(t==="souvenir")saveSouvenir(id);
     else if(t==="guest")saveGuest(id);
     else if(t==="doc")saveDoc(id);
     else if(t==="vendor")saveVendor(id);
@@ -1156,6 +1207,7 @@ function bindModalEvents(type,id,brmId){
   mc.querySelectorAll("[data-tx-type]").forEach(p=>{p.onclick=()=>{switchTxType(p.dataset.txType);};});
   mc.querySelectorAll("[data-tx-st]").forEach(p=>{p.onclick=()=>{txStatus=p.dataset.txSt;mc.querySelectorAll("[data-tx-st]").forEach(x=>x.classList.toggle("active",x===p));};});
   mc.querySelectorAll("[data-ses-party]").forEach(p=>{p.onclick=()=>{sesParty=p.dataset.sesParty;mc.querySelectorAll("[data-ses-party]").forEach(x=>x.classList.toggle("active",x===p));};});
+  mc.querySelectorAll("[data-souv-st]").forEach(p=>{p.onclick=()=>{souvStatus=p.dataset.souvSt;mc.querySelectorAll("[data-souv-st]").forEach(x=>x.classList.toggle("active",x===p));};});
   mc.querySelectorAll("[data-pers-party]").forEach(p=>{p.onclick=()=>{const hid=mc.querySelector("#m-pers-party");if(hid)hid.value=p.dataset.persParty;mc.querySelectorAll("[data-pers-party]").forEach(x=>x.classList.toggle("active",x===p));};});
   mc.querySelectorAll("[data-pers-st]").forEach(p=>{p.onclick=()=>{const hid=mc.querySelector("#m-pers-status");if(hid)hid.value=p.dataset.persSt;mc.querySelectorAll("[data-pers-st]").forEach(x=>x.classList.toggle("active",x===p));};});
   mc.querySelectorAll("[data-ses-st]").forEach(p=>{p.onclick=()=>{sesStatus=p.dataset.sesSt;mc.querySelectorAll("[data-ses-st]").forEach(x=>x.classList.toggle("active",x===p));};});
@@ -1203,7 +1255,7 @@ function delBrismedItem(brmId,itemId){
 
 function delItem(type,id){
   if(!confirm(L("itemDeleted")+"?"))return;
-  const map={tx:"transactions",ses:"seserahan",guest:"guests",doc:"documents",pers:"persiapan",vendor:"vendors",brismed:"brismed","brismed-shared-item":"brismedItems"};
+  const map={tx:"transactions",ses:"seserahan",souvenir:"souvenir",guest:"guests",doc:"documents",pers:"persiapan",vendor:"vendors",brismed:"brismed","brismed-shared-item":"brismedItems"};
   if(map[type])S[map[type]]=S[map[type]].filter(x=>String(x.id)!==String(id));
   if(type==="brismed"){syncBrismedBudget();}
   closeModal();renderPage(curTab);showToast(L("itemDeleted"));addNotif("Item berhasil dihapus","ti-trash");
@@ -1444,7 +1496,7 @@ ${isEdit?`<button class="btn-danger" data-del="tx"><i class="ti ti-trash" style=
 function togglePayDropdown(){const d=document.getElementById("pay-dropdown");if(d){d.style.display=d.style.display==="none"?"block":"none";const inp=document.getElementById("pay-search-inp");if(inp&&d.style.display==="block")inp.focus();}}
 function filterPayItems(q){const rows=document.querySelectorAll(".pay-item-row");rows.forEach(r=>{const txt=r.textContent.toLowerCase();r.style.display=txt.includes(q.toLowerCase())?"flex":"none";});}
 function payTypeBadge(type){
-  const m={Seserahan:{bg:"var(--pink-bg)",c:"var(--rose-dark)",ic:"ti-gift"},Perlengkapan:{bg:"var(--teal-light)",c:"var(--teal-dark)",ic:"ti-package"},Vendor:{bg:"var(--amber-bg)",c:"var(--amber)",ic:"ti-building-store"},Persiapan:{bg:"#F5F0FE",c:"#6A3AAF",ic:"ti-backpack"}};
+  const m={Seserahan:{bg:"var(--pink-bg)",c:"var(--rose-dark)",ic:"ti-gift"},Souvenir:{bg:"var(--amber-bg)",c:"var(--amber)",ic:"ti-box-seam"},Perlengkapan:{bg:"var(--teal-light)",c:"var(--teal-dark)",ic:"ti-package"},Vendor:{bg:"var(--amber-bg)",c:"var(--amber)",ic:"ti-building-store"},Persiapan:{bg:"#F5F0FE",c:"#6A3AAF",ic:"ti-backpack"}};
   const s=m[type]||{bg:"var(--gray-light)",c:"var(--gray)",ic:"ti-box"};
   return`<span style="display:inline-flex;align-items:center;gap:3px;background:${s.bg};color:${s.c};padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700"><i class="ti ${s.ic}" style="font-size:9px"></i>${type}</span>`;
 }
@@ -1545,7 +1597,7 @@ function saveTx(id){
     const budItems=getBudgetItems();
     const selItem=budItems.find(b=>b.id===refId);
     const itemName=selItem?selItem.label:"Pembayaran";
-    const cat=selItem?({Vendor:"Vendor",Seserahan:"Seserahan",Perlengkapan:"Bridesmaid",Persiapan:"Lain-Lain"}[selItem.type]||"Lain-Lain"):"Lain-Lain";
+    const cat=selItem?({Vendor:"Vendor",Seserahan:"Seserahan",Souvenir:"Souvenir",Perlengkapan:"Bridesmaid",Persiapan:"Lain-Lain"}[selItem.type]||"Lain-Lain"):"Lain-Lain";
     if(id){const tx=S.transactions.find(x=>String(x.id)===String(id));if(tx)Object.assign(tx,{name:"Bayar: "+itemName,cat,type:"pay",amount:amt,status:payStatus,payStatus,notes,payRefId:refId,date:tx.date});showToast("Pembayaran diperbarui");}
     else{S.transactions.unshift({id:Date.now(),name:"Bayar: "+itemName,cat,type:"pay",amount:amt,status:payStatus,payStatus,notes,payRefId:refId,date:new Date().toISOString().split("T")[0]});showToast("Pembayaran dicatat");addNotif("Pembayaran baru dicatat ("+payStatus+")","ti-cash");}
     txPaySel=null;closeModal();renderPage("anggaran");return;
@@ -1588,6 +1640,42 @@ function saveSes(id){
   const link=(document.getElementById("m-ses-link")||{}).value||"";
   if(id){const item=S.seserahan.find(x=>String(x.id)===String(id));if(item)Object.assign(item,{name,cat,party:sesParty,price,status:sesStatus,link});showToast(L("sesUpdated"));addNotif("Seserahan \""+name+"\" diperbarui","ti-gift");}
   else{S.seserahan.push({id:Date.now(),name,cat,party:sesParty,price,status:sesStatus,link});showToast(L("sesAdded"));addNotif("Seserahan \""+name+"\" ditambahkan","ti-gift");}
+  closeModal();renderPage("seserahan");
+}
+
+function buildSouvenirForm(id){
+  const ex=id?(S.souvenir||[]).find(x=>String(x.id)===String(id)):null;
+  if(ex){souvStatus=ex.status;}else{souvStatus="Belum Dibeli";}
+  const isEdit=!!ex;
+  const sts=[["Belum Dibeli",L("notBought")],["Sedang Dikemas",L("beingPacked")],["Sudah Dibeli",L("bought")],["Siap",L("ready")]];
+  return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div class="modal-title">${isEdit?"Edit Souvenir":"Tambah Souvenir"}</div><button class="hicon" id="modal-close"><i class="ti ti-x"></i></button></div>
+<span class="field-label">Nama Souvenir</span>
+<input id="m-souv-name" class="input-field" placeholder="e.g., Gantungan Kunci, Tote Bag" value="${ex?ex.name:""}">
+<span class="field-label">${L("category")}</span>
+<div class="cat-trigger" style="display:flex;align-items:center;gap:12px;border:1.5px solid var(--border);border-radius:14px;padding:11px 14px;margin-top:4px;background:var(--gray-light);opacity:.85">
+  <div style="width:38px;height:38px;border-radius:11px;background:#F0F7F4;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-box-seam" style="color:#2A7A5C"></i></div>
+  <div style="flex:1"><div style="font-size:14px;font-weight:600;color:var(--dark)">Souvenir</div><div style="font-size:11px;color:var(--gray);margin-top:1px">Kenangan Tamu — kategori tetap</div></div>
+</div>
+<span class="field-label">Jumlah (Pcs)</span>
+<input id="m-souv-qty" class="input-field" type="number" min="1" inputmode="numeric" placeholder="0" value="${ex?(ex.qty||1):""}">
+<span class="field-label">Harga / Pcs</span>
+<div class="money-wrap"><span class="money-pfx">Rp</span><input id="m-souv-price" class="money-input" inputmode="numeric" placeholder="0" value="${ex?fmtN(ex.price):""}"></div>
+<span class="field-label">LINK TOKO (Opsional)</span>
+<div style="display:flex;gap:9px;align-items:center"><i class="ti ti-shopping-bag" style="font-size:17px;color:var(--gray)"></i><input id="m-souv-link" class="input-field" placeholder="https://tokopedia.com/..." value="${ex&&ex.link?ex.link:""}"></div>
+<span class="field-label">${L("status")}</span>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">${sts.map(([v,lbl])=>`<div class="rsvp-seg${souvStatus===v?" active":""}" data-souv-st="${v}">${lbl}</div>`).join("")}</div>
+${isEdit?`<button class="btn-danger" data-del="souvenir"><i class="ti ti-trash" style="font-size:15px"></i>Hapus Souvenir</button>`:""}
+<button class="btn-primary" data-save="souvenir"><i class="ti ti-device-floppy" style="font-size:15px"></i>${isEdit?"Simpan Perubahan":"Tambah Souvenir"}</button>`;
+}
+function saveSouvenir(id){
+  const name=(document.getElementById("m-souv-name").value||"").trim();
+  if(!name){showToast(L("fillName"));return;}
+  const qty=parseInt((document.getElementById("m-souv-qty")||{}).value||"1",10)||1;
+  const price=moneyVal("m-souv-price");
+  const link=(document.getElementById("m-souv-link")||{}).value||"";
+  if(!S.souvenir)S.souvenir=[];
+  if(id){const item=S.souvenir.find(x=>String(x.id)===String(id));if(item)Object.assign(item,{name,cat:"Souvenir",qty,price,status:souvStatus,link});showToast("Souvenir berhasil diperbarui");addNotif("Souvenir \""+name+"\" diperbarui","ti-box-seam");}
+  else{S.souvenir.push({id:Date.now(),name,cat:"Souvenir",qty,price,status:souvStatus,link});showToast("Souvenir berhasil ditambahkan");addNotif("Souvenir \""+name+"\" ditambahkan","ti-box-seam");}
   closeModal();renderPage("seserahan");
 }
 
@@ -2278,7 +2366,7 @@ async function loadFromRTDB(){
     const d=snap.val();
     /* Meta/settings & notif TIDAK diload dari RTDB — hanya dari Firestore */
     /* collections */
-    const cols=["transactions","seserahan","guests","documents","vendors","brismed","brismedItems","persiapan"];
+    const cols=["transactions","seserahan","souvenir","guests","documents","vendors","brismed","brismedItems","persiapan"];
     cols.forEach(col=>{
       if(d[col]){
         const items=Object.values(d[col]).map(it=>{const c={...it};delete c._t;return c;});
@@ -2309,6 +2397,11 @@ async function loadFromFirestore(){
     }
     const notifSnap=await _FS.getDoc(_FS.doc(_db,"users",_uid,"meta","notif"));
     if(notifSnap.exists())Object.assign(S.notif,notifSnap.data());
+    const notifLogSnap=await _FS.getDoc(_FS.doc(_db,"users",_uid,"meta","notifLog"));
+    if(notifLogSnap.exists()){
+      const nd=notifLogSnap.data();
+      if(Array.isArray(nd.items))S.notifLog=nd.items;
+    }
     /* Collections tidak dibaca dari Firestore — semua dari RTDB */
   }catch(e){console.error("loadFromFirestore",e.message);}
 }
@@ -2321,6 +2414,7 @@ let _rtFirstSnap=true; /* skip notif on initial load (saat app baru dibuka) */
 const _colMeta={
   transactions:{label:"Transaksi",icon:"ti-report-money"},
   seserahan:{label:"Seserahan",icon:"ti-gift"},
+  souvenir:{label:"Souvenir",icon:"ti-box-seam"},
   guests:{label:"Tamu",icon:"ti-users"},
   documents:{label:"Dokumen",icon:"ti-file-check"},
   vendors:{label:"Vendor",icon:"ti-building-store"},
@@ -2341,7 +2435,7 @@ function startRTDBListener(){
     const isInitial=_rtFirstSnap;
     const remoteNotifs=[]; /* {msg, icon} yang akan dikirim sebagai push setelah semua kolom diproses */
     /* Update collections if remote is newer */
-    const cols=["transactions","seserahan","guests","documents","vendors","brismed","brismedItems","persiapan"];
+    const cols=["transactions","seserahan","souvenir","guests","documents","vendors","brismed","brismedItems","persiapan"];
     cols.forEach(col=>{
       if(d[col]){
         const items=Object.values(d[col]).map(it=>{const c={...it};delete c._t;return c;});
@@ -2394,6 +2488,10 @@ async function syncSes(id){
   const t=id?S.seserahan.find(x=>String(x.id)===String(id)):S.seserahan[S.seserahan.length-1];
   if(t)await fbSave("seserahan",t);
 }
+async function syncSouvenir(id){
+  const t=id?(S.souvenir||[]).find(x=>String(x.id)===String(id)):(S.souvenir||[])[(S.souvenir||[]).length-1];
+  if(t)await fbSave("souvenir",t);
+}
 async function syncGuest(id){
   const t=id?S.guests.find(x=>String(x.id)===String(id)):S.guests[S.guests.length-1];
   if(t)await fbSave("guests",t);
@@ -2420,6 +2518,12 @@ async function syncPersiapan(id){
 }
 async function syncSettings(){await fbSaveMeta("settings",{couple:S.couple,income:S.income,lang:S.lang,darkMode:S.darkMode,themeId:S.themeId||"rosegold",profilePhoto:"Foto_Profil.jpeg"||null,coverPhoto:"Cover_Profil.jpeg"||null,waLink:S.waLink||"",waTemplate:S.waTemplate||""});}
 async function syncNotif(){await fbSaveMeta("notif",{...S.notif});}
+let _notifSyncTmr=null;
+function syncNotifLog(){
+  /* Debounce supaya tidak spam write tiap kali addNotif terpanggil berkali-kali */
+  if(_notifSyncTmr)clearTimeout(_notifSyncTmr);
+  _notifSyncTmr=setTimeout(()=>{fbSaveMeta("notifLog",{items:S.notifLog||[]});},600);
+}
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    FIREBASE INIT (Firestore + Auth + RTDB)
@@ -2634,6 +2738,13 @@ document.addEventListener("click",function(e){
     var syncId=id||S.seserahan[S.seserahan.length-1].id;
     syncSes(syncId);
   };
+  /* --- saveSouvenir --- */
+  var _sSouv=saveSouvenir;
+  saveSouvenir=function(id){
+    _sSouv(id);
+    var syncId=id||(S.souvenir||[])[(S.souvenir||[]).length-1].id;
+    syncSouvenir(syncId);
+  };
   /* --- saveGuest --- */
   var _sG=saveGuest;
   saveGuest=function(id){
@@ -2693,7 +2804,7 @@ document.addEventListener("click",function(e){
   /* --- delItem --- */
   var _del=delItem;
   delItem=function(type,id){
-    const map={tx:"transactions",ses:"seserahan",guest:"guests",doc:"documents",pers:"persiapan",vendor:"vendors",brismed:"brismed","brismed-shared-item":"brismedItems"};
+    const map={tx:"transactions",ses:"seserahan",souvenir:"souvenir",guest:"guests",doc:"documents",pers:"persiapan",vendor:"vendors",brismed:"brismed","brismed-shared-item":"brismedItems"};
     if(!confirm(L("itemDeleted")+"?"))return;
     if(type==="brismed"){if(S.brismed)S.brismed=S.brismed.filter(x=>String(x.id)!==String(id));syncBrismedBudget();closeModal();renderPage(curTab);showToast(L("itemDeleted"));addNotif("Item berhasil dihapus","ti-trash");fbDelete("brismed",id);return;}
     if(type==="brismed-shared-item"){if(S.brismedItems)S.brismedItems=S.brismedItems.filter(x=>String(x.id)!==String(id));closeModal();renderPage(curTab);showToast(L("itemDeleted"));addNotif("Item berhasil dihapus","ti-trash");fbDelete("brismedItems",id);return;}
