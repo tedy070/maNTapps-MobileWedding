@@ -2739,99 +2739,74 @@ document.addEventListener("click",function(e){
   /* --- saveTx --- */
   var _sTx=saveTx;
   saveTx=function(id){
-    var lenBefore=S.transactions.length;
-    var lastIdBefore=S.transactions[0]?S.transactions[0].id:null;
     _sTx(id);
-    /* Cek apakah modal sudah tertutup (indikator save berhasil) */
-    if(document.getElementById("modal-overlay").classList.contains("open"))return;
-    if(id){syncTx(id);}
-    else if(S.transactions.length>lenBefore||( S.transactions[0]&&S.transactions[0].id!==lastIdBefore)){syncTx(S.transactions[0].id);}
+    /* Jika add baru (id null), ambil item terbaru dari array */
+    var syncId=id||S.transactions[0].id;
+    syncTx(syncId);
   };
   /* --- saveSes --- */
   var _sSes=saveSes;
   saveSes=function(id){
-    var lenBefore=S.seserahan.length;
     _sSes(id);
-    if(document.getElementById("modal-overlay").classList.contains("open"))return;
-    if(id){syncSes(id);}
-    else if(S.seserahan.length>lenBefore){syncSes(S.seserahan[S.seserahan.length-1].id);}
+    var syncId=id||S.seserahan[S.seserahan.length-1].id;
+    syncSes(syncId);
   };
   /* --- saveGuest --- */
   var _sG=saveGuest;
   saveGuest=function(id){
-    var lenBefore=S.guests.length;
     _sG(id);
-    if(document.getElementById("modal-overlay").classList.contains("open"))return;
-    if(id){syncGuest(id);}
-    else if(S.guests.length>lenBefore){syncGuest(S.guests[S.guests.length-1].id);}
+    var syncId=id||S.guests[S.guests.length-1].id;
+    syncGuest(syncId);
   };
   /* --- saveDoc --- */
   var _sD=saveDoc;
   saveDoc=function(id){
-    var lenBefore=S.documents.length;
     _sD(id);
-    if(document.getElementById("modal-overlay").classList.contains("open"))return;
-    if(id){syncDoc(id);}
-    else if(S.documents.length>lenBefore){syncDoc(S.documents[S.documents.length-1].id);}
+    var syncId=id||S.documents[S.documents.length-1].id;
+    syncDoc(syncId);
   };
   /* --- saveVendor --- */
   var _sV=saveVendor;
   saveVendor=function(id){
-    var lenBefore=S.vendors.length;
     _sV(id);
-    if(document.getElementById("modal-overlay").classList.contains("open"))return;
-    if(id){syncVendor(id);}
-    else if(S.vendors.length>lenBefore){syncVendor(S.vendors[S.vendors.length-1].id);}
+    var syncId=id||S.vendors[S.vendors.length-1].id;
+    syncVendor(syncId);
   };
   /* --- saveBrismed --- */
   var _sBrm=saveBrismed;
   saveBrismed=function(id){
-    var lenBefore=S.brismed.length;
     _sBrm(id);
-    if(document.getElementById("modal-overlay").classList.contains("open"))return;
-    if(id){syncBrismedPerson(id);}
-    else if(S.brismed.length>lenBefore){syncBrismedPerson(S.brismed[S.brismed.length-1].id);}
+    var syncId=id||S.brismed[S.brismed.length-1].id;
+    syncBrismedPerson(syncId);
   };
   /* --- saveBrismedItem --- */
   var _sBrmI=saveBrismedItem;
   saveBrismedItem=function(brmId,itemId){
     _sBrmI(brmId,itemId);
-    if(document.getElementById("modal-overlay").classList.contains("open"))return;
     var b=S.brismed.find(x=>String(x.id)===String(brmId));
     if(b)fbSave("brismed",b);
   };
   /* --- saveBrismedSeserahan --- */
   var _sBrmS=saveBrismedSeserahan;
   saveBrismedSeserahan=function(id){
-    var arr=S.brismedItems||[];
-    var lenBefore=arr.length;
     _sBrmS(id);
-    if(document.getElementById("modal-overlay").classList.contains("open"))return;
-    var arr2=S.brismedItems||[];
-    if(id){syncBrismedItem(id);}
-    else if(arr2.length>lenBefore){syncBrismedItem(arr2[arr2.length-1].id);}
+    var syncId=id||(S.brismedItems||[])[(S.brismedItems||[]).length-1].id;
+    syncBrismedItem(syncId);
   };
   /* --- savePersiapan --- */
   var _sPers=savePersiapan;
   savePersiapan=function(id){
-    var arr=S.persiapan||[];
-    var lenBefore=arr.length;
     _sPers(id);
-    if(document.getElementById("modal-overlay").classList.contains("open"))return;
-    var arr2=S.persiapan||[];
-    if(id){syncPersiapan(id);}
-    else if(arr2.length>lenBefore){syncPersiapan(arr2[arr2.length-1].id);}
+    var syncId=id||(S.persiapan||[])[(S.persiapan||[]).length-1].id;
+    syncPersiapan(syncId);
   };
   /* --- saveSouvenir --- */
   var _sSv=saveSouvenir;
   saveSouvenir=function(id){
-    var arr=S.souvenir||[];
-    var lenBefore=arr.length;
     _sSv(id);
-    if(document.getElementById("modal-overlay").classList.contains("open"))return;
-    var arr2=S.souvenir||[];
-    if(id){syncSouvenir(id);}
-    else if(arr2.length>lenBefore){syncSouvenir(arr2[arr2.length-1].id);}
+    var arr=S.souvenir||[];
+    var syncId=id||arr[arr.length-1].id;
+    syncSouvenir(syncId);
   };
   /* --- requestPushPermission (auto-grant on launch) --- */
   var _rPP=requestPushPermission;
@@ -2844,12 +2819,12 @@ document.addEventListener("click",function(e){
   var _del=delItem;
   delItem=function(type,id){
     const map={tx:"transactions",ses:"seserahan",souvenir:"souvenir",guest:"guests",doc:"documents",pers:"persiapan",vendor:"vendors",brismed:"brismed","brismed-shared-item":"brismedItems"};
-    /* Panggil fungsi asli (sudah ada confirm di dalamnya) */
-    _del(type,id);
-    /* Setelah hapus lokal, sync ke Firebase — cek modal sudah tertutup sebagai indikator berhasil */
-    if(document.getElementById("modal-overlay").classList.contains("open"))return;
-    const col=map[type];
-    if(col)fbDelete(col,id);
+    if(!confirm(L("itemDeleted")+"?"))return;
+    if(type==="brismed"){if(S.brismed)S.brismed=S.brismed.filter(x=>String(x.id)!==String(id));syncBrismedBudget();closeModal();renderPage(curTab);showToast(L("itemDeleted"));addNotif("Item berhasil dihapus","ti-trash");fbDelete("brismed",id);return;}
+    if(type==="brismed-shared-item"){if(S.brismedItems)S.brismedItems=S.brismedItems.filter(x=>String(x.id)!==String(id));closeModal();renderPage(curTab);showToast(L("itemDeleted"));addNotif("Item berhasil dihapus","ti-trash");fbDelete("brismedItems",id);return;}
+    if(map[type])S[map[type]]=S[map[type]].filter(x=>String(x.id)!==String(id));
+    closeModal();renderPage(curTab);showToast(L("itemDeleted"));addNotif("Item berhasil dihapus","ti-trash");
+    if(map[type])fbDelete(map[type],id);
   };
   /* --- saveDetail --- */
   var _sDet=saveDetail;
