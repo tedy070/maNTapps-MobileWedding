@@ -229,13 +229,14 @@ const S={
   ],
   notif:{pushOn:false},
   darkMode:false,lang:"id",themeId:"rosegold",
-  budFilter:"semua",sesFilter:"Semua",guestSearch:"",guestFilter:"Semua",vendSearch:"",
+  budFilter:"semua",sesFilter:"Semua",sesTab:"seserahan",guestSearch:"",guestFilter:"Semua",vendSearch:"",
   tamuTab:"tamu",
   guestFilterMode:"gender",vipFilter:"Semua",
   brmSubTab:"nama",
   docSubTab:"dokumen",
   brismed:[],
   brismedItems:[],
+  souvenir:[],
   persiapan:[],
   notifLog:[],
   profilePhoto:"Foto_Profil.jpeg"||null,coverPhoto:"Cover_Profil.jpeg"||null
@@ -393,6 +394,8 @@ function addNotif(msg,icon){
   updateNotifDot();
   /* Send push notification */
   sendPushNotif("Wedding Planner",msg);
+  /* Sync ke RTDB jika tersedia */
+  if(typeof syncNotifLog==="function")syncNotifLog();
 }
 function updateNotifDot(){
   const btn=document.getElementById("btn-notif");if(!btn)return;
@@ -506,6 +509,7 @@ function initNotifPageEvents(){
     if(!confirm("Hapus semua notifikasi?"))return;
     S.notifLog=[];updateNotifDot();
     sp.innerHTML=buildNotifPage();initNotifPageEvents();
+    if(typeof syncNotifLog==="function")syncNotifLog();
   };
   const markBtn=document.getElementById("notif-mark-read");
   if(markBtn)markBtn.onclick=()=>{showToast("Semua ditandai terbaca");};
@@ -597,6 +601,7 @@ function afterRender(name){
 function bindListEvents(){
   document.querySelectorAll("[data-edit-tx]").forEach(b=>{ b.onclick=()=>openModal("tx",b.dataset.editTx); });
   document.querySelectorAll("[data-edit-ses]").forEach(b=>{ b.onclick=()=>openModal("ses",b.dataset.editSes); });
+  document.querySelectorAll("[data-edit-sv]").forEach(b=>{ b.onclick=()=>openModal("souvenir",b.dataset.editSv); });
   document.querySelectorAll("[data-edit-guest]").forEach(b=>{ b.onclick=()=>openModal("guest",b.dataset.editGuest); });
   document.querySelectorAll("[data-preview-guest]").forEach(b=>{ b.onclick=()=>openWaPreview(b.dataset.previewGuest,"preview"); });
   document.querySelectorAll("[data-wa-guest]").forEach(b=>{ b.onclick=()=>openWaPreview(b.dataset.waGuest,"send"); });
@@ -632,6 +637,9 @@ function bindListEvents(){
   /* FABs */
   const fabTx=document.getElementById("fab-tx");if(fabTx)fabTx.onclick=()=>openModal("tx",null);
   const fabSes=document.getElementById("fab-ses");if(fabSes)fabSes.onclick=()=>openModal("ses",null);
+  const fabSouvenir=document.getElementById("fab-souvenir");if(fabSouvenir)fabSouvenir.onclick=()=>openModal("souvenir",null);
+  const btnSesTab=document.getElementById("btn-ses-tab-seserahan");if(btnSesTab)btnSesTab.onclick=()=>{S.sesTab="seserahan";renderPage("seserahan");};
+  const btnSvTab=document.getElementById("btn-ses-tab-souvenir");if(btnSvTab)btnSvTab.onclick=()=>{S.sesTab="souvenir";renderPage("seserahan");};
   const fabDoc=document.getElementById("fab-doc");if(fabDoc)fabDoc.onclick=()=>openModal("doc",null);
   const fabPers=document.getElementById("fab-pers");if(fabPers)fabPers.onclick=()=>openModal("pers",null);
   const btnDocSubDok=document.getElementById("btn-doc-sub-dokumen");if(btnDocSubDok)btnDocSubDok.onclick=()=>{S.docSubTab="dokumen";renderPage("dokumen");};
@@ -814,6 +822,24 @@ function pgRingkasan(){
     <div class="progress-bar"><div class="progress-fill" style="width:${sesPct}%"></div></div>
     <div style="margin-top:8px;font-size:12px;color:var(--gray)">${L("estimatedCost")}: <span style="font-weight:700;color:var(--rose-dark)">${fmt(t.sesCost)}</span></div>
   </div>
+  ${(()=>{
+    const svItems=S.souvenir||[];
+    const svDone=svItems.filter(i=>["Siap","Sudah Dibeli","Sudah Dihias","Selesai"].includes(i.status)).length;
+    const svTotal=svItems.length;
+    const svPct2=Math.round(svDone/Math.max(svTotal,1)*100);
+    const svCost=svItems.reduce((a,i)=>a+(i.price||0),0);
+    const svQty=svItems.reduce((a,i)=>a+(i.qty||0),0);
+    return`<div class="card" style="background:var(--pink-bg);border-color:var(--rose-light)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-weight:600;font-size:15px;color:var(--rose-dark)">Souvenir Tamu</span><i class="ti ti-gift-card" style="font-size:20px;color:var(--rose-mid)"></i></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+        <div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--rose-dark)">${svTotal}</div><div style="font-size:9.5px;font-weight:600;color:var(--rose-mid);letter-spacing:.4px;text-transform:uppercase">Item</div></div>
+        <div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--success)">${svDone}</div><div style="font-size:9.5px;font-weight:600;color:var(--success);letter-spacing:.4px;text-transform:uppercase">Siap</div></div>
+        <div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--rose-dark)">${svQty||"-"}</div><div style="font-size:9.5px;font-weight:600;color:var(--rose-mid);letter-spacing:.4px;text-transform:uppercase">Pcs</div></div>
+      </div>
+      <div class="progress-bar" style="background:rgba(200,100,130,.18)"><div class="progress-fill" style="width:${svPct2}%;background:var(--rose)"></div></div>
+      <div style="margin-top:8px;font-size:12px;color:var(--rose-dark)">Estimasi: <span style="font-weight:700">${fmt(svCost)}</span> &middot; ${svPct2}% selesai</div>
+    </div>`;
+  })()}
   <div class="card" style="background:var(--teal-light);border-color:var(--teal)">
     ${(()=>{const bItems=S.brismedItems||[];const bDone=bItems.filter(i=>["Siap","Sudah Dibeli","Sudah Dihias"].includes(i.status)).length;const bTotal=bItems.length;const bPct=Math.round(bDone/Math.max(bTotal,1)*100);const bCost=bItems.reduce((a,i)=>a+i.price,0);return`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-weight:600;font-size:15px;color:var(--teal-dark)">Perlengkapan Bridesmaid</span><i class="ti ti-package" style="font-size:20px;color:var(--teal)"></i></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--teal-dark)">${bTotal}</div><div style="font-size:9.5px;font-weight:600;color:var(--teal);letter-spacing:.4px;text-transform:uppercase">Total</div></div><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--success)">${bDone}</div><div style="font-size:9.5px;font-weight:600;color:var(--success);letter-spacing:.4px;text-transform:uppercase">Siap</div></div><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--teal-dark)">${bPct}%</div><div style="font-size:9.5px;font-weight:600;color:var(--teal);letter-spacing:.4px;text-transform:uppercase">Progress</div></div></div><div class="progress-bar" style="background:rgba(61,122,110,.2)"><div class="progress-fill" style="width:${bPct}%;background:var(--teal)"></div></div><div style="margin-top:8px;font-size:12px;color:var(--teal-dark)">Estimasi Biaya: <span style="font-weight:700">${fmt(bCost)}</span>${S.brismed.length>0?` &middot; ${S.brismed.length} bridesmaid`:""}</div>`;})()}
   </div>
@@ -866,15 +892,43 @@ function pgAnggaran(){
 }
 
 function pgSeserahan(){
-  const t=totals();const pct=Math.round(t.sesDone/Math.max(S.seserahan.length,1)*100);
-  const items=S.seserahan.filter(i=>S.sesFilter==="Semua"||(S.sesFilter==="Pria"&&i.party==="Pria")||(S.sesFilter==="Wanita"&&i.party==="Wanita")||(S.sesFilter==="Mahar"&&i.party==="Mahar"));
-  return `<div style="padding:18px 18px 0"><div class="section-head" style="margin-bottom:4px">${L("seserahanTitle")}</div><div style="font-size:13px;color:var(--gray);margin-bottom:12px">${L("seserahanSub")}</div></div>
+  const sesTab=S.sesTab||"seserahan";
+  const t=totals();
+
+  /* ── Navbar ── */
+  const navbar=`<div style="display:flex;background:var(--gray-light);border-radius:14px;padding:4px;margin:14px 14px 14px">
+    <button id="btn-ses-tab-seserahan" style="flex:1;border:none;border-radius:11px;padding:9px 0;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;background:${sesTab==="seserahan"?"var(--white)":"transparent"};color:${sesTab==="seserahan"?"var(--teal-dark)":"var(--gray)"};box-shadow:${sesTab==="seserahan"?"0 1px 4px rgba(0,0,0,.09)":"none"}">Seserahan</button>
+    <button id="btn-ses-tab-souvenir" style="flex:1;border:none;border-radius:11px;padding:9px 0;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;background:${sesTab==="souvenir"?"var(--white)":"transparent"};color:${sesTab==="souvenir"?"var(--rose-dark)":"var(--gray)"};box-shadow:${sesTab==="souvenir"?"0 1px 4px rgba(0,0,0,.09)":"none"}">Souvenir</button>
+  </div>`;
+
+  /* ── Tab Seserahan ── */
+  if(sesTab==="seserahan"){
+    const pct=Math.round(t.sesDone/Math.max(S.seserahan.length,1)*100);
+    const items=S.seserahan.filter(i=>S.sesFilter==="Semua"||(S.sesFilter==="Pria"&&i.party==="Pria")||(S.sesFilter==="Wanita"&&i.party==="Wanita")||(S.sesFilter==="Mahar"&&i.party==="Mahar"));
+    return `<div style="padding:18px 18px 0"><div class="section-head" style="margin-bottom:4px">${L("seserahanTitle")}</div><div style="font-size:13px;color:var(--gray);margin-bottom:12px">${L("seserahanSub")}</div></div>
+  ${navbar}
   <div class="card"><div style="font-size:10px;font-weight:600;color:var(--gray);letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px">${L("overallProgress")}</div><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-weight:600;font-size:14px">${t.sesDone} / ${S.seserahan.length} ${L("itemsReady")}</span><span style="font-size:13px;color:var(--gray)">${pct}%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div></div>
   <div class="grad-card"><div style="font-size:10px;font-weight:600;color:var(--rose-mid);letter-spacing:.6px;text-transform:uppercase;margin-bottom:4px">${L("estimatedCost")}</div><div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--rose-dark);margin-top:2px">${fmt(t.sesCost)}</div><div style="font-size:12.5px;color:var(--teal);margin-top:5px;display:flex;align-items:center;gap:4px"><i class="ti ti-circle-check" style="font-size:14px"></i>${L("withinBudget")}</div></div>
   <div class="pill-row">${[[L("allParty"),"Semua"],[L("male"),"Pria"],[L("female"),"Wanita"],[L("dowry"),"Mahar"]].map(([lbl,v])=>`<span class="pill${S.sesFilter===v?" active":""}" data-ses-filter="${v}">${lbl}</span>`).join("")}</div>
-  ${items.map(item=>{const refId="ses_"+item.id;const paid=getPaidAmount(refId);const warn=getBudgetWarning(item.price,paid);const pct=item.price>0?Math.min(100,Math.round(paid/item.price*100)):0;return`<div class="card"><div style="display:flex;gap:12px"><div style="width:48px;height:48px;border-radius:13px;background:var(--gray-light);display:flex;align-items:center;justify-content:center;color:var(--gray);flex-shrink:0"><i class="ti ${catIcon(item.cat)}" style="font-size:22px"></i></div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="font-weight:600;font-size:14px">${item.name}</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><span class="badge ${sCls(item.status)}"><i class="ti ${sIcon(item.status)}" style="font-size:10px"></i> ${item.status}</span><button class="edit-btn" data-edit-ses="${item.id}" onclick="event.stopPropagation()"><i class="ti ti-pencil" style="font-size:13px"></i></button></div></div><div style="font-size:12px;color:var(--gray);margin-top:2px">${item.cat} &middot; ${item.party==="Mahar"?item.party:"Untuk "+item.party}</div>${item.link?`<div style="margin-top:6px"><a href="${item.link}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--rose-dark);text-decoration:none;background:var(--pink-bg);padding:4px 10px;border-radius:20px;border:1px solid var(--rose-light)"><i class="ti ti-shopping-bag" style="font-size:12px"></i>Beli di Toko</a></div>`:""}
+  ${items.length===0?`<div class="card" style="text-align:center;padding:32px 16px;color:var(--gray)"><i class="ti ti-gift" style="font-size:36px;display:block;margin-bottom:8px"></i>Belum ada item seserahan</div>`
+  :items.map(item=>{const refId="ses_"+item.id;const paid=getPaidAmount(refId);const warn=getBudgetWarning(item.price,paid);const pct=item.price>0?Math.min(100,Math.round(paid/item.price*100)):0;return`<div class="card"><div style="display:flex;gap:12px"><div style="width:48px;height:48px;border-radius:13px;background:var(--gray-light);display:flex;align-items:center;justify-content:center;color:var(--gray);flex-shrink:0"><i class="ti ${catIcon(item.cat)}" style="font-size:22px"></i></div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="font-weight:600;font-size:14px">${item.name}</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><span class="badge ${sCls(item.status)}"><i class="ti ${sIcon(item.status)}" style="font-size:10px"></i> ${item.status}</span><button class="edit-btn" data-edit-ses="${item.id}" onclick="event.stopPropagation()"><i class="ti ti-pencil" style="font-size:13px"></i></button></div></div><div style="font-size:12px;color:var(--gray);margin-top:2px">${item.cat} &middot; ${item.party==="Mahar"?item.party:"Untuk "+item.party}</div>${item.link?`<div style="margin-top:6px"><a href="${item.link}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--rose-dark);text-decoration:none;background:var(--pink-bg);padding:4px 10px;border-radius:20px;border:1px solid var(--rose-light)"><i class="ti ti-shopping-bag" style="font-size:12px"></i>Beli di Toko</a></div>`:""}
 <div data-pay-history="${refId}" data-pay-label="${item.name.replace(/"/g,'&quot;')}" data-pay-budget="${item.price}" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-light);cursor:pointer"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:11px;color:var(--gray)">Anggaran: <span style="font-weight:700;color:var(--dark)">${fmt(item.price)}</span></span><span class="badge ${warn.cls}" style="font-size:10px"><i class="ti ${warn.ic}" style="font-size:9px"></i> ${warn.label}</span></div><div class="progress-bar" style="height:4px;margin-bottom:4px"><div class="progress-fill" style="width:${pct}%;background:${warn.label==="Overbudget"?"var(--danger)":warn.label==="Cukup"?"var(--amber)":"var(--teal)"}"></div></div><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:var(--gray);display:flex;align-items:center;gap:4px">Terpakai: <span style="font-weight:600;color:var(--dark)">${fmt(paid)}</span><i class="ti ti-receipt" style="font-size:12px;color:var(--teal)"></i></span></div></div></div></div></div>`;}).join("")}
   <button class="fab" id="fab-ses"><i class="ti ti-plus" style="font-size:22px"></i></button>`;
+  }
+
+  /* ── Tab Souvenir ── */
+  const souvenirs=(S.souvenir||[]);
+  const svDone=souvenirs.filter(i=>["Siap","Sudah Dibeli","Sudah Dihias","Selesai"].includes(i.status)).length;
+  const svCost=souvenirs.reduce((a,i)=>a+(i.price||0),0);
+  const svPct=Math.round(svDone/Math.max(souvenirs.length,1)*100);
+  return `<div style="padding:18px 18px 0"><div class="section-head" style="margin-bottom:4px">Seserahan & Mahar</div><div style="font-size:13px;color:var(--gray);margin-bottom:12px">Kelola souvenir untuk tamu pernikahan Anda.</div></div>
+  ${navbar}
+  <div class="card"><div style="font-size:10px;font-weight:600;color:var(--gray);letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px">Progress Souvenir</div><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-weight:600;font-size:14px">${svDone} / ${souvenirs.length} Item Siap</span><span style="font-size:13px;color:var(--gray)">${svPct}%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${svPct}%"></div></div></div>
+  <div class="grad-card"><div style="font-size:10px;font-weight:600;color:var(--rose-mid);letter-spacing:.6px;text-transform:uppercase;margin-bottom:4px">Estimasi Biaya</div><div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--rose-dark);margin-top:2px">${fmt(svCost)}</div><div style="font-size:12.5px;color:var(--teal);margin-top:5px;display:flex;align-items:center;gap:4px"><i class="ti ti-circle-check" style="font-size:14px"></i>Total ${souvenirs.length} item souvenir</div></div>
+  ${souvenirs.length===0?`<div class="card" style="text-align:center;padding:32px 16px;color:var(--gray)"><i class="ti ti-gift" style="font-size:36px;display:block;margin-bottom:8px"></i>Belum ada souvenir<div style="font-size:12px;margin-top:6px">Tap + untuk menambah souvenir</div></div>`
+  :souvenirs.map(item=>{const refId="sv_"+item.id;const paid=getPaidAmount(refId);const warn=getBudgetWarning(item.price||0,paid);const pct=( item.price||0)>0?Math.min(100,Math.round(paid/(item.price||1)*100)):0;return`<div class="card"><div style="display:flex;gap:12px"><div style="width:48px;height:48px;border-radius:13px;background:var(--gray-light);display:flex;align-items:center;justify-content:center;color:var(--gray);flex-shrink:0"><i class="ti ${catIcon(item.cat||"Souvenir")}" style="font-size:22px"></i></div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="font-weight:600;font-size:14px">${item.name}</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><span class="badge ${sCls(item.status)}"><i class="ti ${sIcon(item.status)}" style="font-size:10px"></i> ${item.status}</span><button class="edit-btn" data-edit-sv="${item.id}" onclick="event.stopPropagation()"><i class="ti ti-pencil" style="font-size:13px"></i></button></div></div><div style="font-size:12px;color:var(--gray);margin-top:2px">${item.cat||"Souvenir"}${item.qty?` &middot; ${item.qty} pcs`:""}</div>${item.link?`<div style="margin-top:6px"><a href="${item.link}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--rose-dark);text-decoration:none;background:var(--pink-bg);padding:4px 10px;border-radius:20px;border:1px solid var(--rose-light)"><i class="ti ti-shopping-bag" style="font-size:12px"></i>Beli di Toko</a></div>`:""}
+<div data-pay-history="${refId}" data-pay-label="${item.name.replace(/"/g,'&quot;')}" data-pay-budget="${item.price||0}" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-light);cursor:pointer"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:11px;color:var(--gray)">Anggaran: <span style="font-weight:700;color:var(--dark)">${fmt(item.price||0)}</span></span><span class="badge ${warn.cls}" style="font-size:10px"><i class="ti ${warn.ic}" style="font-size:9px"></i> ${warn.label}</span></div><div class="progress-bar" style="height:4px;margin-bottom:4px"><div class="progress-fill" style="width:${pct}%;background:${warn.label==="Overbudget"?"var(--danger)":warn.label==="Cukup"?"var(--amber)":"var(--teal)"}"></div></div><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:var(--gray);display:flex;align-items:center;gap:4px">Terpakai: <span style="font-weight:600;color:var(--dark)">${fmt(paid)}</span><i class="ti ti-receipt" style="font-size:12px;color:var(--teal)"></i></span></div></div></div></div></div>`;}).join("")}
+  <button class="fab" id="fab-souvenir"><i class="ti ti-plus" style="font-size:22px"></i></button>`;
 }
 
 function guestCard(g){
@@ -1111,11 +1165,11 @@ function openModal(type,id,brmId){
     mc.dataset.brmId=brmId||id;
     mc.dataset.itemId=brmId?id:"";
   } else {
-    const builders={tx:buildTxForm,ses:buildSesForm,guest:buildGuestForm,doc:buildDocForm,pers:buildPersForm,vendor:buildVendorForm,brismed:buildBrismedForm,"brismed-ses":buildBrismedSeserahanForm};
+    const builders={tx:buildTxForm,ses:buildSesForm,souvenir:buildSouvenirForm,guest:buildGuestForm,doc:buildDocForm,pers:buildPersForm,vendor:buildVendorForm,brismed:buildBrismedForm,"brismed-ses":buildBrismedSeserahanForm};
     mc.innerHTML="<div class=\"modal-handle\"></div>"+(builders[type]?builders[type](id):"");
   }
   setTimeout(()=>{
-    ["m-tx-amt","m-ses-price","m-v-cost","m-brmi-price","m-brms-price","m-pers-price"].forEach(eid=>bindMoney(eid));
+    ["m-tx-amt","m-ses-price","m-sv-price","m-v-cost","m-brmi-price","m-brms-price","m-pers-price"].forEach(eid=>bindMoney(eid));
     bindModalEvents(type,id,brmId);
   },30);
 }
@@ -1151,6 +1205,7 @@ function bindModalEvents(type,id,brmId){
     else if(t==="brismed")saveBrismed(id);
     else if(t==="brismed-item")saveBrismedItem(_brmId,_itemId||null);
     else if(t==="brismed-ses")saveBrismedSeserahan(id);
+    else if(t==="souvenir")saveSouvenir(id);
     else if(t==="pers")savePersiapan(id);
   };
   mc.querySelectorAll("[data-tx-type]").forEach(p=>{p.onclick=()=>{switchTxType(p.dataset.txType);};});
@@ -1159,6 +1214,7 @@ function bindModalEvents(type,id,brmId){
   mc.querySelectorAll("[data-pers-party]").forEach(p=>{p.onclick=()=>{const hid=mc.querySelector("#m-pers-party");if(hid)hid.value=p.dataset.persParty;mc.querySelectorAll("[data-pers-party]").forEach(x=>x.classList.toggle("active",x===p));};});
   mc.querySelectorAll("[data-pers-st]").forEach(p=>{p.onclick=()=>{const hid=mc.querySelector("#m-pers-status");if(hid)hid.value=p.dataset.persSt;mc.querySelectorAll("[data-pers-st]").forEach(x=>x.classList.toggle("active",x===p));};});
   mc.querySelectorAll("[data-ses-st]").forEach(p=>{p.onclick=()=>{sesStatus=p.dataset.sesSt;mc.querySelectorAll("[data-ses-st]").forEach(x=>x.classList.toggle("active",x===p));};});
+  mc.querySelectorAll("[data-sv-st]").forEach(p=>{p.onclick=()=>{sesStatus=p.dataset.svSt;mc.querySelectorAll("[data-sv-st]").forEach(x=>x.classList.toggle("active",x===p));};});
   mc.querySelectorAll("[data-g-group]").forEach(p=>{p.onclick=()=>{gGroup=p.dataset.gGroup;mc.querySelectorAll("[data-g-group]").forEach(x=>x.classList.toggle("active",x===p));};});
   mc.querySelectorAll("[data-g-gender]").forEach(p=>{p.onclick=()=>{const hid=mc.querySelector("#m-g-gender");if(hid)hid.value=p.dataset.gGender;mc.querySelectorAll("[data-g-gender]").forEach(x=>x.classList.toggle("active",x===p));};});
   mc.querySelectorAll("[data-g-rsvp]").forEach(p=>{p.onclick=()=>{gRsvp=p.dataset.gRsvp;mc.querySelectorAll("[data-g-rsvp]").forEach(x=>x.classList.toggle("active",x===p));};});
@@ -1203,7 +1259,7 @@ function delBrismedItem(brmId,itemId){
 
 function delItem(type,id){
   if(!confirm(L("itemDeleted")+"?"))return;
-  const map={tx:"transactions",ses:"seserahan",guest:"guests",doc:"documents",pers:"persiapan",vendor:"vendors",brismed:"brismed","brismed-shared-item":"brismedItems"};
+  const map={tx:"transactions",ses:"seserahan",souvenir:"souvenir",guest:"guests",doc:"documents",pers:"persiapan",vendor:"vendors",brismed:"brismed","brismed-shared-item":"brismedItems"};
   if(map[type])S[map[type]]=S[map[type]].filter(x=>String(x.id)!==String(id));
   if(type==="brismed"){syncBrismedBudget();}
   closeModal();renderPage(curTab);showToast(L("itemDeleted"));addNotif("Item berhasil dihapus","ti-trash");
@@ -1588,6 +1644,39 @@ function saveSes(id){
   const link=(document.getElementById("m-ses-link")||{}).value||"";
   if(id){const item=S.seserahan.find(x=>String(x.id)===String(id));if(item)Object.assign(item,{name,cat,party:sesParty,price,status:sesStatus,link});showToast(L("sesUpdated"));addNotif("Seserahan \""+name+"\" diperbarui","ti-gift");}
   else{S.seserahan.push({id:Date.now(),name,cat,party:sesParty,price,status:sesStatus,link});showToast(L("sesAdded"));addNotif("Seserahan \""+name+"\" ditambahkan","ti-gift");}
+  closeModal();renderPage("seserahan");
+}
+
+function buildSouvenirForm(id){
+  if(!S.souvenir)S.souvenir=[];
+  const ex=id?S.souvenir.find(x=>String(x.id)===String(id)):null;
+  if(ex){sesStatus=ex.status;}else{sesStatus="Belum Dibeli";}
+  const isEdit=!!ex;
+  const sts=[["Belum Dibeli",L("notBought")],["Sedang Dikemas",L("beingPacked")],["Sudah Dibeli",L("bought")],["Sudah Dihias",L("decorated")],["Siap",L("ready")]];
+  return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div class="modal-title">${isEdit?"Edit Souvenir":"Tambah Souvenir"}</div><button class="hicon" id="modal-close"><i class="ti ti-x"></i></button></div>
+<div class="modal-handle" style="margin-top:0"></div>
+<span class="field-label">NAMA SOUVENIR</span>
+<input id="m-sv-name" class="input-field" placeholder="e.g., Totebag, Mug Custom" value="${ex?ex.name:""}">
+<span class="field-label">JUMLAH (PCS)</span>
+<input id="m-sv-qty" class="input-field" type="number" inputmode="numeric" placeholder="0" value="${ex&&ex.qty?ex.qty:""}">
+<span class="field-label">HARGA / ESTIMASI</span>
+<div class="money-wrap"><span class="money-pfx">Rp</span><input id="m-sv-price" class="money-input" inputmode="numeric" placeholder="0" value="${ex?fmtN(ex.price||0):""}"></div>
+<span class="field-label">LINK TOKO (OPSIONAL)</span>
+<input id="m-sv-link" class="input-field" placeholder="https://tokopedia.com/..." value="${ex&&ex.link?ex.link:""}">
+<span class="field-label">${L("status")}</span>
+<div style="display:flex;gap:8px;flex-wrap:wrap">${pillRow(sts,"data-sv-st",sesStatus)}</div>
+${isEdit?`<button class="btn-danger" data-del="souvenir"><i class="ti ti-trash" style="font-size:15px"></i>Hapus Souvenir</button>`:""}
+<button class="btn-primary" data-save="souvenir"><i class="ti ti-device-floppy" style="font-size:15px"></i>${isEdit?"Simpan Perubahan":"Tambah Souvenir"}</button>`;
+}
+function saveSouvenir(id){
+  if(!S.souvenir)S.souvenir=[];
+  const name=(document.getElementById("m-sv-name").value||"").trim();
+  if(!name){showToast(L("fillName"));return;}
+  const price=moneyVal("m-sv-price");
+  const qty=parseInt((document.getElementById("m-sv-qty")||{}).value||"0",10)||0;
+  const link=(document.getElementById("m-sv-link")||{}).value||"";
+  if(id){const item=S.souvenir.find(x=>String(x.id)===String(id));if(item)Object.assign(item,{name,cat:"Souvenir",price,qty,status:sesStatus,link});showToast("Souvenir berhasil diperbarui");addNotif("Souvenir \""+name+"\" diperbarui","ti-gift");}
+  else{S.souvenir.push({id:Date.now(),name,cat:"Souvenir",price,qty,status:sesStatus,link});showToast("Souvenir berhasil ditambahkan");addNotif("Souvenir \""+name+"\" ditambahkan","ti-gift");}
   closeModal();renderPage("seserahan");
 }
 
@@ -2278,7 +2367,7 @@ async function loadFromRTDB(){
     const d=snap.val();
     /* Meta/settings & notif TIDAK diload dari RTDB — hanya dari Firestore */
     /* collections */
-    const cols=["transactions","seserahan","guests","documents","vendors","brismed","brismedItems","persiapan"];
+    const cols=["transactions","seserahan","souvenir","guests","documents","vendors","brismed","brismedItems","persiapan"];
     cols.forEach(col=>{
       if(d[col]){
         const items=Object.values(d[col]).map(it=>{const c={...it};delete c._t;return c;});
@@ -2286,6 +2375,12 @@ async function loadFromRTDB(){
         S[col]=items;
       }
     });
+    /* Load notifLog dari RTDB */
+    if(d.notifLog){
+      const logs=Object.values(d.notifLog).map(it=>{const c={...it};delete c._t;return c;});
+      logs.sort((a,b)=>b.time-a.time);
+      S.notifLog=logs.slice(0,50);
+    }
     return true;
   }catch(e){console.error("loadFromRTDB",e.message);return false;}
 }
@@ -2321,6 +2416,7 @@ let _rtFirstSnap=true; /* skip notif on initial load (saat app baru dibuka) */
 const _colMeta={
   transactions:{label:"Transaksi",icon:"ti-report-money"},
   seserahan:{label:"Seserahan",icon:"ti-gift"},
+  souvenir:{label:"Souvenir",icon:"ti-gift-card"},
   guests:{label:"Tamu",icon:"ti-users"},
   documents:{label:"Dokumen",icon:"ti-file-check"},
   vendors:{label:"Vendor",icon:"ti-building-store"},
@@ -2339,9 +2435,8 @@ function startRTDBListener(){
     const d=snap.val();
     let changed=false;
     const isInitial=_rtFirstSnap;
-    const remoteNotifs=[]; /* {msg, icon} yang akan dikirim sebagai push setelah semua kolom diproses */
-    /* Update collections if remote is newer */
-    const cols=["transactions","seserahan","guests","documents","vendors","brismed","brismedItems","persiapan"];
+    const remoteNotifs=[];
+    const cols=["transactions","seserahan","souvenir","guests","documents","vendors","brismed","brismedItems","persiapan"];
     cols.forEach(col=>{
       if(d[col]){
         const items=Object.values(d[col]).map(it=>{const c={...it};delete c._t;return c;});
@@ -2349,14 +2444,13 @@ function startRTDBListener(){
         const localStr=JSON.stringify(S[col]);
         const remoteStr=JSON.stringify(items);
         if(localStr!==remoteStr){
-          /* Deteksi item baru/berubah dari perangkat lain (skip saat initial load) */
           if(!isInitial){
             const oldMap={};(S[col]||[]).forEach(it=>{oldMap[String(it.id)]=it;});
             const meta=_colMeta[col]||{label:col,icon:"ti-bell"};
             items.forEach(it=>{
               const prev=oldMap[String(it.id)];
               const itName=it.name||it.label||"";
-              if(isRecentLocalWrite(col,it.id))return; /* skip echo dari tulisan sendiri */
+              if(isRecentLocalWrite(col,it.id))return;
               if(!prev){
                 remoteNotifs.push({msg:meta.label+" baru: \""+itName+"\" ditambahkan dari perangkat lain",icon:meta.icon});
               }else if(JSON.stringify(prev)!==JSON.stringify(it)){
@@ -2368,8 +2462,14 @@ function startRTDBListener(){
         }
       }
     });
+    /* Sync notifLog dari RTDB ke local */
+    if(d.notifLog&&!isInitial){
+      const logs=Object.values(d.notifLog).map(it=>{const c={...it};delete c._t;return c;});
+      logs.sort((a,b)=>b.time-a.time);
+      S.notifLog=logs.slice(0,50);
+      updateNotifDot();
+    }
     if(changed){renderPage(curTab);showSyncBadge();}
-    /* Kirim push notifikasi untuk tiap perubahan dari device lain (maks 3 sekaligus biar tidak spam) */
     if(!isInitial&&remoteNotifs.length>0){
       remoteNotifs.slice(0,3).forEach(n=>{
         if(!S.notifLog)S.notifLog=[];
@@ -2417,6 +2517,23 @@ async function syncBrismedItem(id){
 async function syncPersiapan(id){
   const t=id?(S.persiapan||[]).find(x=>String(x.id)===String(id)):(S.persiapan||[])[(S.persiapan||[]).length-1];
   if(t)await fbSave("persiapan",t);
+}
+async function syncSouvenir(id){
+  if(!S.souvenir)return;
+  const t=id?S.souvenir.find(x=>String(x.id)===String(id)):S.souvenir[S.souvenir.length-1];
+  if(t)await fbSave("souvenir",t);
+}
+async function syncNotifLog(){
+  if(!_rtdbReady||!_RD||!_uid)return;
+  if(!S.notifLog||S.notifLog.length===0)return;
+  try{
+    const obj={};
+    S.notifLog.slice(0,50).forEach(n=>{
+      const key="n_"+n.time;
+      obj[key]={msg:n.msg,icon:n.icon||"ti-bell",time:n.time,_t:Date.now()};
+    });
+    await _RD.set(_RD.ref(_rtdb,`users/${_uid}/notifLog`),obj);
+  }catch(e){console.error("syncNotifLog",e.message);}
 }
 async function syncSettings(){await fbSaveMeta("settings",{couple:S.couple,income:S.income,lang:S.lang,darkMode:S.darkMode,themeId:S.themeId||"rosegold",profilePhoto:"Foto_Profil.jpeg"||null,coverPhoto:"Cover_Profil.jpeg"||null,waLink:S.waLink||"",waTemplate:S.waTemplate||""});}
 async function syncNotif(){await fbSaveMeta("notif",{...S.notif});}
@@ -2683,6 +2800,14 @@ document.addEventListener("click",function(e){
     var syncId=id||(S.persiapan||[])[(S.persiapan||[]).length-1].id;
     syncPersiapan(syncId);
   };
+  /* --- saveSouvenir --- */
+  var _sSv=saveSouvenir;
+  saveSouvenir=function(id){
+    _sSv(id);
+    var arr=S.souvenir||[];
+    var syncId=id||arr[arr.length-1].id;
+    syncSouvenir(syncId);
+  };
   /* --- requestPushPermission (auto-grant on launch) --- */
   var _rPP=requestPushPermission;
   requestPushPermission=async function(){
@@ -2693,7 +2818,7 @@ document.addEventListener("click",function(e){
   /* --- delItem --- */
   var _del=delItem;
   delItem=function(type,id){
-    const map={tx:"transactions",ses:"seserahan",guest:"guests",doc:"documents",pers:"persiapan",vendor:"vendors",brismed:"brismed","brismed-shared-item":"brismedItems"};
+    const map={tx:"transactions",ses:"seserahan",souvenir:"souvenir",guest:"guests",doc:"documents",pers:"persiapan",vendor:"vendors",brismed:"brismed","brismed-shared-item":"brismedItems"};
     if(!confirm(L("itemDeleted")+"?"))return;
     if(type==="brismed"){if(S.brismed)S.brismed=S.brismed.filter(x=>String(x.id)!==String(id));syncBrismedBudget();closeModal();renderPage(curTab);showToast(L("itemDeleted"));addNotif("Item berhasil dihapus","ti-trash");fbDelete("brismed",id);return;}
     if(type==="brismed-shared-item"){if(S.brismedItems)S.brismedItems=S.brismedItems.filter(x=>String(x.id)!==String(id));closeModal();renderPage(curTab);showToast(L("itemDeleted"));addNotif("Item berhasil dihapus","ti-trash");fbDelete("brismedItems",id);return;}
