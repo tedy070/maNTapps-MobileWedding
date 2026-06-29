@@ -922,8 +922,8 @@ function pgSouvenirContent(){
   return `<div style="padding:0 18px 0"><div style="font-size:13px;color:var(--gray);margin-bottom:12px">Kelola souvenir untuk tamu undangan — gantungan kunci, tote bag, dan kenang-kenangan lainnya.</div></div>
   <div class="card"><div style="font-size:10px;font-weight:600;color:var(--gray);letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px">${L("overallProgress")}</div><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-weight:600;font-size:14px">${t.souvDone} / ${souv.length} ${L("itemsReady")} &middot; ${totalQty} pcs</span><span style="font-size:13px;color:var(--gray)">${pct}%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div></div>
   <div class="grad-card"><div style="font-size:10px;font-weight:600;color:var(--rose-mid);letter-spacing:.6px;text-transform:uppercase;margin-bottom:4px">${L("estimatedCost")}</div><div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--rose-dark);margin-top:2px">${fmt(t.souvCost)}</div></div>
-  ${souv.map(item=>{const total=(item.qty||1)*item.price;return`<div class="card"><div style="display:flex;gap:12px"><div style="width:48px;height:48px;border-radius:13px;background:var(--amber-bg);display:flex;align-items:center;justify-content:center;color:var(--amber);flex-shrink:0"><i class="ti ti-box-seam" style="font-size:22px"></i></div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="font-weight:600;font-size:14px">${item.name}</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><span class="badge ${sCls(item.status)}"><i class="ti ${sIcon(item.status)}" style="font-size:10px"></i> ${item.status}</span><button class="edit-btn" data-edit-souvenir="${item.id}" onclick="event.stopPropagation()"><i class="ti ti-pencil" style="font-size:13px"></i></button></div></div><div style="font-size:12px;color:var(--gray);margin-top:2px">${item.qty||1} pcs &middot; ${fmt(item.price)}/pcs</div>${item.link?`<div style="margin-top:6px"><a href="${item.link}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--amber);text-decoration:none;background:var(--amber-bg);padding:4px 10px;border-radius:20px;border:1px solid var(--amber)"><i class="ti ti-shopping-bag" style="font-size:12px"></i>Beli di Toko</a></div>`:""}
-<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-light)"><span style="font-size:11px;color:var(--gray)">Total: <span style="font-weight:700;color:var(--dark)">${fmt(total)}</span></span></div></div></div></div>`;}).join("")}
+  ${souv.map(item=>{const total=(item.qty||1)*item.price;const refId="souv_"+item.id;const paid=getPaidAmount(refId);const warn=getBudgetWarning(total,paid);const pct=total>0?Math.min(100,Math.round(paid/total*100)):0;return`<div class="card"><div style="display:flex;gap:12px"><div style="width:48px;height:48px;border-radius:13px;background:var(--amber-bg);display:flex;align-items:center;justify-content:center;color:var(--amber);flex-shrink:0"><i class="ti ti-box-seam" style="font-size:22px"></i></div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="font-weight:600;font-size:14px">${item.name}</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><span class="badge ${sCls(item.status)}"><i class="ti ${sIcon(item.status)}" style="font-size:10px"></i> ${item.status}</span><button class="edit-btn" data-edit-souvenir="${item.id}" onclick="event.stopPropagation()"><i class="ti ti-pencil" style="font-size:13px"></i></button></div></div><div style="font-size:12px;color:var(--gray);margin-top:2px">${item.qty||1} pcs &middot; ${fmt(item.price)}/pcs</div>${item.link?`<div style="margin-top:6px"><a href="${item.link}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--amber);text-decoration:none;background:var(--amber-bg);padding:4px 10px;border-radius:20px;border:1px solid var(--amber)"><i class="ti ti-shopping-bag" style="font-size:12px"></i>Beli di Toko</a></div>`:""}
+<div data-pay-history="${refId}" data-pay-label="${item.name.replace(/"/g,'&quot;')}" data-pay-budget="${total}" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-light);cursor:pointer"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:11px;color:var(--gray)">Total: <span style="font-weight:700;color:var(--dark)">${fmt(total)}</span></span><span class="badge ${warn.cls}" style="font-size:10px"><i class="ti ${warn.ic}" style="font-size:9px"></i> ${warn.label}</span></div><div class="progress-bar" style="height:4px;margin-bottom:4px"><div class="progress-fill" style="width:${pct}%;background:${warn.label==="Overbudget"?"var(--danger)":warn.label==="Cukup"?"var(--amber)":"var(--teal)"}"></div></div><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:var(--gray);display:flex;align-items:center;gap:4px">Terpakai: <span style="font-weight:600;color:var(--dark)">${fmt(paid)}</span><i class="ti ti-receipt" style="font-size:12px;color:var(--teal)"></i></span></div></div></div></div></div>`;}).join("")}
   <button class="fab" id="fab-souvenir"><i class="ti ti-plus" style="font-size:22px"></i></button>`;
 }
 
@@ -2374,6 +2374,11 @@ async function loadFromRTDB(){
         S[col]=items;
       }
     });
+    /* Log notifikasi — disimpan di RTDB agar realtime & tidak hilang */
+    if(d.notifLog&&Array.isArray(d.notifLog.items)){
+      S.notifLog=d.notifLog.items;
+      updateNotifDot();
+    }
     return true;
   }catch(e){console.error("loadFromRTDB",e.message);return false;}
 }
@@ -2397,12 +2402,7 @@ async function loadFromFirestore(){
     }
     const notifSnap=await _FS.getDoc(_FS.doc(_db,"users",_uid,"meta","notif"));
     if(notifSnap.exists())Object.assign(S.notif,notifSnap.data());
-    const notifLogSnap=await _FS.getDoc(_FS.doc(_db,"users",_uid,"meta","notifLog"));
-    if(notifLogSnap.exists()){
-      const nd=notifLogSnap.data();
-      if(Array.isArray(nd.items))S.notifLog=nd.items;
-    }
-    /* Collections tidak dibaca dari Firestore — semua dari RTDB */
+    /* Collections & notifLog tidak dibaca dari Firestore — semua dari RTDB */
   }catch(e){console.error("loadFromFirestore",e.message);}
 }
 
@@ -2463,6 +2463,20 @@ function startRTDBListener(){
       }
     });
     if(changed){renderPage(curTab);showSyncBadge();}
+    /* Sinkron realtime log notifikasi dari perangkat lain */
+    if(d.notifLog&&Array.isArray(d.notifLog.items)){
+      const localLogStr=JSON.stringify(S.notifLog||[]);
+      const remoteLogStr=JSON.stringify(d.notifLog.items);
+      if(localLogStr!==remoteLogStr&&!isRecentLocalWrite("notifLog","_log")){
+        S.notifLog=d.notifLog.items;
+        updateNotifDot();
+        const sp=document.getElementById("subpage-container");
+        if(sp&&sp.classList.contains("open")&&document.getElementById("notif-clear-btn")){
+          sp.innerHTML=buildNotifPage();initNotifPageEvents();
+        }
+        showSyncBadge();
+      }
+    }
     /* Kirim push notifikasi untuk tiap perubahan dari device lain (maks 3 sekaligus biar tidak spam) */
     if(!isInitial&&remoteNotifs.length>0){
       remoteNotifs.slice(0,3).forEach(n=>{
@@ -2472,6 +2486,7 @@ function startRTDBListener(){
       });
       if(S.notifLog&&S.notifLog.length>50)S.notifLog=S.notifLog.slice(0,50);
       updateNotifDot();
+      syncNotifLog();
     }
     _rtFirstSnap=false;
   });
@@ -2520,9 +2535,19 @@ async function syncSettings(){await fbSaveMeta("settings",{couple:S.couple,incom
 async function syncNotif(){await fbSaveMeta("notif",{...S.notif});}
 let _notifSyncTmr=null;
 function syncNotifLog(){
-  /* Debounce supaya tidak spam write tiap kali addNotif terpanggil berkali-kali */
+  /* Notifikasi disimpan ke RTDB (bukan Firestore) supaya realtime antar perangkat & tidak hilang saat refresh */
   if(_notifSyncTmr)clearTimeout(_notifSyncTmr);
-  _notifSyncTmr=setTimeout(()=>{fbSaveMeta("notifLog",{items:S.notifLog||[]});},600);
+  _notifSyncTmr=setTimeout(()=>{fbSaveNotifLog();},400);
+}
+async function fbSaveNotifLog(){
+  if(!_rtdbReady||!_RD||!_uid)return;
+  try{
+    markLocalWrite("notifLog","_log");
+    const clean=JSON.parse(JSON.stringify({items:S.notifLog||[],_t:Date.now()}));
+    const ref=_RD.ref(_rtdb,rtPath("notifLog"));
+    await _RD.set(ref,clean);
+    showSyncBadge();
+  }catch(e){console.error("RTDB notifLog save",e.message);}
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
