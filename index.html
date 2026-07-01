@@ -395,13 +395,14 @@ function sendPushNotif(title,body,icon){
 /* ── Notif log ── */
 function addNotif(msg,icon){
   if(!S.notifLog)S.notifLog=[];
-  S.notifLog.unshift({msg,icon:icon||"ti-bell",time:Date.now()});
+  const item={msg,icon:icon||"ti-bell",time:Date.now()};
+  S.notifLog.unshift(item);
   if(S.notifLog.length>50)S.notifLog=S.notifLog.slice(0,50);
   updateNotifDot();
   /* Send push notification */
   sendPushNotif("Wedding Planner",msg);
-  /* Simpan log notifikasi ke Firebase agar tidak hilang saat refresh/ganti device */
-  if(typeof _uid!=="undefined"&&_uid)syncNotifLog();
+  /* Simpan per-item ke RTDB agar tidak hilang saat refresh/ganti device */
+  if(typeof _uid!=="undefined"&&_uid)fbAddNotifItem(item);
 }
 function updateNotifDot(){
   const btn=document.getElementById("btn-notif");if(!btn)return;
@@ -516,7 +517,7 @@ function initNotifPageEvents(){
   if(clearBtn)clearBtn.onclick=()=>{
     if(!confirm("Hapus semua notifikasi?"))return;
     S.notifLog=[];updateNotifDot();
-    if(typeof _uid!=="undefined"&&_uid)syncNotifLog();
+    if(typeof _uid!=="undefined"&&_uid)fbClearNotifLog();
     sp.innerHTML=buildNotifPage();initNotifPageEvents();
   };
   const markBtn=document.getElementById("notif-mark-read");
@@ -2384,9 +2385,12 @@ async function loadFromRTDB(){
         S[col]=items;
       }
     });
-    /* Log notifikasi — disimpan di RTDB agar realtime & tidak hilang */
-    if(d.notifLog&&Array.isArray(d.notifLog.items)){
-      S.notifLog=d.notifLog.items;
+    /* Log notifikasi — format per-item: notifLog/{time} → {msg,icon,time} */
+    if(d.notifLog&&typeof d.notifLog==="object"){
+      S.notifLog=Object.entries(d.notifLog)
+        .filter(([k,v])=>v&&typeof v==="object"&&v.msg)
+        .map(([k,v])=>({msg:v.msg,icon:v.icon||"ti-bell",time:Number(v.time)||0}))
+        .sort((a,b)=>b.time-a.time).slice(0,50);
       updateNotifDot();
     }
     return true;
@@ -2480,11 +2484,15 @@ function startRTDBListener(){
     });
     if(changed){renderPage(curTab);showSyncBadge();}
     /* Sinkron realtime log notifikasi dari perangkat lain */
-    if(d.notifLog&&Array.isArray(d.notifLog.items)){
+    if(d.notifLog&&typeof d.notifLog==="object"){
+      const remoteLog=Object.entries(d.notifLog)
+        .filter(([k,v])=>v&&typeof v==="object"&&v.msg)
+        .map(([k,v])=>({msg:v.msg,icon:v.icon||"ti-bell",time:Number(v.time)||0}))
+        .sort((a,b)=>b.time-a.time).slice(0,50);
       const localLogStr=JSON.stringify(S.notifLog||[]);
-      const remoteLogStr=JSON.stringify(d.notifLog.items);
+      const remoteLogStr=JSON.stringify(remoteLog);
       if(localLogStr!==remoteLogStr&&!isRecentLocalWrite("notifLog","_log")){
-        S.notifLog=d.notifLog.items;
+        S.notifLog=remoteLog;
         updateNotifDot();
         const sp=document.getElementById("subpage-container");
         if(sp&&sp.classList.contains("open")&&document.getElementById("notif-clear-btn")){
@@ -2495,14 +2503,16 @@ function startRTDBListener(){
     }
     /* Kirim push notifikasi untuk tiap perubahan dari device lain (maks 3 sekaligus biar tidak spam) */
     if(!isInitial&&remoteNotifs.length>0){
+      const newNotifItems=[];
       remoteNotifs.slice(0,3).forEach(n=>{
         if(!S.notifLog)S.notifLog=[];
-        S.notifLog.unshift({msg:n.msg,icon:n.icon,time:Date.now()});
+        const ni={msg:n.msg,icon:n.icon,time:Date.now()};
+        S.notifLog.unshift(ni);newNotifItems.push(ni);
         sendPushNotif("Wedding Planner",n.msg);
       });
       if(S.notifLog&&S.notifLog.length>50)S.notifLog=S.notifLog.slice(0,50);
       updateNotifDot();
-      syncNotifLog();
+      newNotifItems.forEach(ni=>fbAddNotifItem(ni));
     }
     _rtFirstSnap=false;
   });
@@ -2550,20 +2560,26 @@ async function syncPersiapan(id){
 async function syncSettings(){await fbSaveMeta("settings",{couple:S.couple,income:S.income,lang:S.lang,darkMode:S.darkMode,themeId:S.themeId||"rosegold",profilePhoto:"Foto_Profil.jpeg"||null,coverPhoto:"Cover_Profil.jpeg"||null,waLink:S.waLink||"",waTemplate:S.waTemplate||""});}
 async function syncNotif(){await fbSaveMeta("notif",{...S.notif});}
 let _notifSyncTmr=null;
-function syncNotifLog(){
-  /* Notifikasi disimpan ke RTDB (bukan Firestore) supaya realtime antar perangkat & tidak hilang saat refresh */
-  if(_notifSyncTmr)clearTimeout(_notifSyncTmr);
-  _notifSyncTmr=setTimeout(()=>{fbSaveNotifLog();},400);
-}
-async function fbSaveNotifLog(){
+async function fbAddNotifItem(item){
+  /* Simpan satu notifikasi sebagai node per-item: notifLog/{time} → {msg,icon,time} */
   if(!_rtdbReady||!_RD||!_uid)return;
   try{
     markLocalWrite("notifLog","_log");
-    const clean=JSON.parse(JSON.stringify({items:S.notifLog||[],_t:Date.now()}));
-    const ref=_RD.ref(_rtdb,rtPath("notifLog"));
+    const key=String(item.time);
+    const clean={msg:item.msg,icon:item.icon||"ti-bell",time:item.time};
+    const ref=_RD.ref(_rtdb,rtPath("notifLog/"+key));
     await _RD.set(ref,clean);
     showSyncBadge();
-  }catch(e){console.error("RTDB notifLog save",e.message);}
+  }catch(e){console.error("RTDB notifLog add",e.message);}
+}
+async function fbClearNotifLog(){
+  /* Hapus seluruh notifLog dari RTDB */
+  if(!_rtdbReady||!_RD||!_uid)return;
+  try{
+    markLocalWrite("notifLog","_log");
+    await _RD.remove(_RD.ref(_rtdb,rtPath("notifLog")));
+    showSyncBadge();
+  }catch(e){console.error("RTDB notifLog clear",e.message);}
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
