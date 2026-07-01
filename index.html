@@ -2780,17 +2780,23 @@ document.addEventListener("click",function(e){
    HOOK ALL SAVE/DELETE FUNCTIONS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 (function(){
+  /* ─────────────────────────────────────────────────────────────────
+     PENTING: markLocalWrite dipanggil SEBELUM fungsi original agar
+     listener RTDB tidak menimpa state lokal ketika addNotif()
+     memicu write notifLog lebih dulu (race condition).
+  ───────────────────────────────────────────────────────────────── */
   /* --- saveTx --- */
   var _sTx=saveTx;
   saveTx=function(id){
+    markLocalWrite("transactions","_all");
     _sTx(id);
-    /* Jika add baru (id null), ambil item terbaru dari array */
     var syncId=id||S.transactions[0].id;
     syncTx(syncId);
   };
   /* --- saveSes --- */
   var _sSes=saveSes;
   saveSes=function(id){
+    markLocalWrite("seserahan","_all");
     _sSes(id);
     var syncId=id||S.seserahan[S.seserahan.length-1].id;
     syncSes(syncId);
@@ -2798,6 +2804,7 @@ document.addEventListener("click",function(e){
   /* --- saveSouvenir --- */
   var _sSouv=saveSouvenir;
   saveSouvenir=function(id){
+    markLocalWrite("souvenir","_all");
     _sSouv(id);
     var syncId=id||(S.souvenir||[])[(S.souvenir||[]).length-1].id;
     syncSouvenir(syncId);
@@ -2805,6 +2812,7 @@ document.addEventListener("click",function(e){
   /* --- saveGuest --- */
   var _sG=saveGuest;
   saveGuest=function(id){
+    markLocalWrite("guests","_all");
     _sG(id);
     var syncId=id||S.guests[S.guests.length-1].id;
     syncGuest(syncId);
@@ -2812,6 +2820,7 @@ document.addEventListener("click",function(e){
   /* --- saveDoc --- */
   var _sD=saveDoc;
   saveDoc=function(id){
+    markLocalWrite("documents","_all");
     _sD(id);
     var syncId=id||S.documents[S.documents.length-1].id;
     syncDoc(syncId);
@@ -2819,6 +2828,7 @@ document.addEventListener("click",function(e){
   /* --- saveVendor --- */
   var _sV=saveVendor;
   saveVendor=function(id){
+    markLocalWrite("vendors","_all");
     _sV(id);
     var syncId=id||S.vendors[S.vendors.length-1].id;
     syncVendor(syncId);
@@ -2826,6 +2836,7 @@ document.addEventListener("click",function(e){
   /* --- saveBrismed --- */
   var _sBrm=saveBrismed;
   saveBrismed=function(id){
+    markLocalWrite("brismed","_all");
     _sBrm(id);
     var syncId=id||S.brismed[S.brismed.length-1].id;
     syncBrismedPerson(syncId);
@@ -2833,6 +2844,7 @@ document.addEventListener("click",function(e){
   /* --- saveBrismedItem --- */
   var _sBrmI=saveBrismedItem;
   saveBrismedItem=function(brmId,itemId){
+    markLocalWrite("brismed","_all");
     _sBrmI(brmId,itemId);
     var b=S.brismed.find(x=>String(x.id)===String(brmId));
     if(b)fbSave("brismed",b);
@@ -2840,6 +2852,7 @@ document.addEventListener("click",function(e){
   /* --- saveBrismedSeserahan --- */
   var _sBrmS=saveBrismedSeserahan;
   saveBrismedSeserahan=function(id){
+    markLocalWrite("brismedItems","_all");
     _sBrmS(id);
     var syncId=id||(S.brismedItems||[])[(S.brismedItems||[]).length-1].id;
     syncBrismedItem(syncId);
@@ -2847,6 +2860,7 @@ document.addEventListener("click",function(e){
   /* --- savePersiapan --- */
   var _sPers=savePersiapan;
   savePersiapan=function(id){
+    markLocalWrite("persiapan","_all");
     _sPers(id);
     var syncId=id||(S.persiapan||[])[(S.persiapan||[]).length-1].id;
     syncPersiapan(syncId);
@@ -2863,11 +2877,13 @@ document.addEventListener("click",function(e){
   delItem=function(type,id){
     const map={tx:"transactions",ses:"seserahan",souvenir:"souvenir",guest:"guests",doc:"documents",pers:"persiapan",vendor:"vendors",brismed:"brismed","brismed-shared-item":"brismedItems"};
     if(!confirm(L("itemDeleted")+"?"))return;
+    /* Pre-mark agar listener tidak menimpa state lokal saat addNotif menulis ke notifLog */
+    const col=map[type];if(col)markLocalWrite(col,"_all");
     if(type==="brismed"){if(S.brismed)S.brismed=S.brismed.filter(x=>String(x.id)!==String(id));syncBrismedBudget();closeModal();renderPage(curTab);showToast(L("itemDeleted"));addNotif("Item berhasil dihapus","ti-trash");fbDelete("brismed",id);return;}
     if(type==="brismed-shared-item"){if(S.brismedItems)S.brismedItems=S.brismedItems.filter(x=>String(x.id)!==String(id));closeModal();renderPage(curTab);showToast(L("itemDeleted"));addNotif("Item berhasil dihapus","ti-trash");fbDelete("brismedItems",id);return;}
-    if(map[type])S[map[type]]=S[map[type]].filter(x=>String(x.id)!==String(id));
+    if(col)S[col]=S[col].filter(x=>String(x.id)!==String(id));
     closeModal();renderPage(curTab);showToast(L("itemDeleted"));addNotif("Item berhasil dihapus","ti-trash");
-    if(map[type])fbDelete(map[type],id);
+    if(col)fbDelete(col,id);
   };
   /* --- saveDetail --- */
   var _sDet=saveDetail;
@@ -2875,6 +2891,7 @@ document.addEventListener("click",function(e){
   /* --- cycleDoc --- */
   var _cyc=cycleDoc;
   cycleDoc=function(id){
+    markLocalWrite("documents","_all");
     _cyc(id);
     var d=S.documents.find(x=>String(x.id)===String(id));
     if(d)fbSave("documents",d);
