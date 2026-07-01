@@ -2321,24 +2321,27 @@ function isRecentLocalWrite(col,id){
   return (Date.now()-t)<8000;
 }
 async function fbSave(col,item){
-  /* Data collections (tx, tamu, vendor, dll) HANYA ke RTDB */
+  /* Simpan seluruh collection sebagai items array ke RTDB */
   if(!_rtdbReady||!_RD||!_uid)return;
   try{
-    markLocalWrite(col,item.id); /* tandai supaya echo dari tulisan sendiri tidak memicu notif "dari perangkat lain" */
-    const clean=JSON.parse(JSON.stringify({...item,id:String(item.id),_t:Date.now()}));
-    const ref=_RD.ref(_rtdb,rtPath(`${col}/${String(item.id)}`));
+    markLocalWrite(col,"_all");
+    const arr=S[col]||[];
+    const clean=JSON.parse(JSON.stringify({items:arr,_t:Date.now()}));
+    const ref=_RD.ref(_rtdb,rtPath(col));
     await _RD.set(ref,clean);
     showSyncBadge();
   }catch(e){console.error("RTDB save",col,e.message);}
 }
 
 async function fbDelete(col,id){
-  /* Hapus collection item HANYA dari RTDB */
+  /* Hapus item dari collection dan simpan ulang seluruh array ke RTDB */
   if(!_rtdbReady||!_RD||!_uid)return;
   try{
-    markLocalWrite(col,id);
-    const ref=_RD.ref(_rtdb,rtPath(`${col}/${String(id)}`));
-    await _RD.remove(ref);
+    markLocalWrite(col,"_all");
+    const arr=S[col]||[];
+    const clean=JSON.parse(JSON.stringify({items:arr,_t:Date.now()}));
+    const ref=_RD.ref(_rtdb,rtPath(col));
+    await _RD.set(ref,clean);
     showSyncBadge();
   }catch(e){console.error("RTDB delete",col,e.message);}
 }
@@ -2369,7 +2372,14 @@ async function loadFromRTDB(){
     const cols=["transactions","seserahan","souvenir","guests","documents","vendors","brismed","brismedItems","persiapan"];
     cols.forEach(col=>{
       if(d[col]){
-        const items=Object.values(d[col]).map(it=>{const c={...it};delete c._t;return c;});
+        let items;
+        if(Array.isArray(d[col].items)){
+          /* Format baru: {items:[...], _t:...} */
+          items=d[col].items.map(it=>{const c={...it};delete c._t;return c;});
+        }else{
+          /* Format lama (backward compat): {id1:{...}, id2:{...}} */
+          items=Object.values(d[col]).filter(v=>v&&typeof v==="object"&&!Array.isArray(v)&&v.id!==undefined).map(it=>{const c={...it};delete c._t;return c;});
+        }
         if(col==="transactions")items.sort((a,b)=>String(b.id).localeCompare(String(a.id)));
         S[col]=items;
       }
@@ -2438,19 +2448,25 @@ function startRTDBListener(){
     const cols=["transactions","seserahan","souvenir","guests","documents","vendors","brismed","brismedItems","persiapan"];
     cols.forEach(col=>{
       if(d[col]){
-        const items=Object.values(d[col]).map(it=>{const c={...it};delete c._t;return c;});
+        let items;
+        if(Array.isArray(d[col].items)){
+          /* Format baru: {items:[...], _t:...} */
+          items=d[col].items.map(it=>{const c={...it};delete c._t;return c;});
+        }else{
+          /* Format lama (backward compat): {id1:{...}, id2:{...}} */
+          items=Object.values(d[col]).filter(v=>v&&typeof v==="object"&&!Array.isArray(v)&&v.id!==undefined).map(it=>{const c={...it};delete c._t;return c;});
+        }
         if(col==="transactions")items.sort((a,b)=>String(b.id).localeCompare(String(a.id)));
         const localStr=JSON.stringify(S[col]);
         const remoteStr=JSON.stringify(items);
         if(localStr!==remoteStr){
-          /* Deteksi item baru/berubah dari perangkat lain (skip saat initial load) */
-          if(!isInitial){
+          /* Deteksi item baru/berubah dari perangkat lain (skip saat initial load & skip echo tulisan sendiri) */
+          if(!isInitial&&!isRecentLocalWrite(col,"_all")){
             const oldMap={};(S[col]||[]).forEach(it=>{oldMap[String(it.id)]=it;});
             const meta=_colMeta[col]||{label:col,icon:"ti-bell"};
             items.forEach(it=>{
               const prev=oldMap[String(it.id)];
               const itName=it.name||it.label||"";
-              if(isRecentLocalWrite(col,it.id))return; /* skip echo dari tulisan sendiri */
               if(!prev){
                 remoteNotifs.push({msg:meta.label+" baru: \""+itName+"\" ditambahkan dari perangkat lain",icon:meta.icon});
               }else if(JSON.stringify(prev)!==JSON.stringify(it)){
