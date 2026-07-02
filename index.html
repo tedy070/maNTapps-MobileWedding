@@ -2464,21 +2464,25 @@ function startRTDBListener(){
         const localStr=JSON.stringify(S[col]);
         const remoteStr=JSON.stringify(items);
         if(localStr!==remoteStr){
-          /* Deteksi item baru/berubah dari perangkat lain (skip saat initial load & skip echo tulisan sendiri) */
-          if(!isInitial&&!isRecentLocalWrite(col,"_all")){
-            const oldMap={};(S[col]||[]).forEach(it=>{oldMap[String(it.id)]=it;});
-            const meta=_colMeta[col]||{label:col,icon:"ti-bell"};
-            items.forEach(it=>{
-              const prev=oldMap[String(it.id)];
-              const itName=it.name||it.label||"";
-              if(!prev){
-                remoteNotifs.push({msg:meta.label+" baru: \""+itName+"\" ditambahkan dari perangkat lain",icon:meta.icon});
-              }else if(JSON.stringify(prev)!==JSON.stringify(it)){
-                remoteNotifs.push({msg:meta.label+" \""+itName+"\" diperbarui dari perangkat lain",icon:meta.icon});
-              }
-            });
+          if(isRecentLocalWrite(col,"_all")){
+            /* Tulisan lokal sendiri — abaikan snapshot lama dari RTDB, jangan timpa state */
+          }else{
+            /* Perubahan dari perangkat lain — update state & deteksi item baru/berubah */
+            if(!isInitial){
+              const oldMap={};(S[col]||[]).forEach(it=>{oldMap[String(it.id)]=it;});
+              const meta=_colMeta[col]||{label:col,icon:"ti-bell"};
+              items.forEach(it=>{
+                const prev=oldMap[String(it.id)];
+                const itName=it.name||it.label||"";
+                if(!prev){
+                  remoteNotifs.push({msg:meta.label+" baru: \""+itName+"\" ditambahkan dari perangkat lain",icon:meta.icon});
+                }else if(JSON.stringify(prev)!==JSON.stringify(it)){
+                  remoteNotifs.push({msg:meta.label+" \""+itName+"\" diperbarui dari perangkat lain",icon:meta.icon});
+                }
+              });
+            }
+            S[col]=items;changed=true;
           }
-          S[col]=items;changed=true;
         }
       }
     });
