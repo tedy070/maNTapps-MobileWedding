@@ -2326,12 +2326,16 @@ async function fbSave(col,item){
   if(!_rtdbReady||!_RD||!_uid)return;
   try{
     markLocalWrite(col,"_all");
-    const arr=S[col]||[];
+    /* Pastikan id selalu string agar lolos validasi RTDB rules */
+    const arr=(S[col]||[]).map(it=>({...it,id:String(it.id)}));
     const clean=JSON.parse(JSON.stringify({items:arr,_t:Date.now()}));
     const ref=_RD.ref(_rtdb,rtPath(col));
     await _RD.set(ref,clean);
     showSyncBadge();
-  }catch(e){console.error("RTDB save",col,e.message);}
+  }catch(e){
+    console.error("RTDB save",col,e.message);
+    showToast("⚠️ Gagal sync: "+e.message.slice(0,60));
+  }
 }
 
 async function fbDelete(col,id){
@@ -2339,12 +2343,15 @@ async function fbDelete(col,id){
   if(!_rtdbReady||!_RD||!_uid)return;
   try{
     markLocalWrite(col,"_all");
-    const arr=S[col]||[];
+    const arr=(S[col]||[]).map(it=>({...it,id:String(it.id)}));
     const clean=JSON.parse(JSON.stringify({items:arr,_t:Date.now()}));
     const ref=_RD.ref(_rtdb,rtPath(col));
     await _RD.set(ref,clean);
     showSyncBadge();
-  }catch(e){console.error("RTDB delete",col,e.message);}
+  }catch(e){
+    console.error("RTDB delete",col,e.message);
+    showToast("⚠️ Gagal sync: "+e.message.slice(0,60));
+  }
 }
 
 async function fbSaveMeta(docId,data){
